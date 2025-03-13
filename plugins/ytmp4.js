@@ -28,35 +28,41 @@ cmd({
 
     // Fetch video download link with a timeout
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000); // 10-second timeout
+    const timeout = setTimeout(() => controller.abort(), 25000); // 25-second timeout
 
-    const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`, {
-      signal: controller.signal,
-    });
+    try {
+      const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`, {
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout); // Clear the timeout if the request completes
+      clearTimeout(timeout); // Clear the timeout if the request completes
 
-    const { success, result } = await apiResponse.json();
+      const { success, result } = await apiResponse.json();
 
-    if (!apiResponse.ok || !success || !result?.download_url) {
-      return reply('*Failed to fetch the video. Please try again later.*');
+      if (!apiResponse.ok || !success || !result?.download_url) {
+        return reply('*Failed to fetch the video. Please try again later.*');
+      }
+
+      // Send video and metadata concurrently
+      await Promise.all([
+        _action.sendMessage(from, {
+          video: { url: result.download_url },
+          mimetype: 'video/mp4',
+          caption: ytmsg
+        }, { quoted: _message })
+      ]);
+
+    } catch (error) {
+      clearTimeout(timeout); // Clear the timeout in case of error
+      if (error.name === 'AbortError') {
+        reply('*❌ Request timed out. Please try again later.*');
+      } else {
+        reply('*❌ An unexpected error occurred. Please try again later.*');
+      }
     }
-
-    // Send video and metadata concurrently
-    await Promise.all([
-      _action.sendMessage(from, {
-        video: { url: result.download_url },
-        mimetype: 'video/mp4',
-        caption: ytmsg
-      }, { quoted: _message })
-    ]);
 
   } catch (error) {
     console.error('Error:', error);
-    if (error.name === 'AbortError') {
-      reply('*❌ Request timed out. Please try again later.*');
-    } else {
-      reply('*❌ An unexpected error occurred. Please try again later.*');
-    }
+    reply('*❌ An unexpected error occurred. Please try again later.*');
   }
 });
