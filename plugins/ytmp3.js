@@ -1,44 +1,53 @@
-const { cmd } = require('../command');
-const yts = require('yt-search'); // YouTube video search
-const axios = require('axios'); // API requests
-const { promisify } = require('util');
-const stream = require('stream');
-const fs = require('fs'); // Import fs module
-const path = require('path'); // Import path module
-const pipeline = promisify(stream.pipeline);
+const { cmd } = require('../command'); // Command handler for the bot
+const yts = require('yt-search'); // For searching YouTube videos
+const axios = require('axios'); // For making API requests
 
 cmd({
     pattern: "song",
     react: "🎵",
-    desc: "Download YouTube audio using keywords.",
+    desc: "Download YouTube audio as MP3.",
     category: "main",
-    use: ".song <title or keywords>",
+    use: ".mp3 <YouTube URL or keywords>",
     filename: __filename,
 }, async (_action, _message, _args, { from, q, reply }) => {
   try {
     // Validate input
     if (!q) {
-      return await reply('*❌ Please provide a video name or link!*');
+      return await reply('*❌ Please provide a YouTube URL or keywords!*');
     }
 
     // Notify user of search progress
-    await reply('```🔍 Searching for the Song... 🎵```');
+    await reply('```🔍 Searching for the video...```');
 
-    // Fetch search results and extract details of the first result
-    const searchResults = await yts(q);
-    const videos = searchResults.videos;
+    // Extract video URL or search for video using keywords
+    let videoUrl = q;
+    let videoDetails = null;
 
-    if (!videos || !videos.length) {
-      return reply('*❌ No results found! Try different keywords.*');
+    if (!q.includes('youtube.com/watch') && !q.includes('youtu.be/')) {
+      // Search YouTube using keywords
+      const searchResults = await yts(q);
+      const videos = searchResults.videos;
+
+      if (!videos || !videos.length) {
+        return reply('*❌ No results found! Try different keywords.*');
+      }
+
+      videoDetails = videos[0]; // Use the first result's details
+      videoUrl = videoDetails.url;
+    } else {
+      // Fetch video details using yt-search
+      const videoInfo = await yts({ videoId: extractVideoId(q) });
+      videoDetails = videoInfo;
     }
 
-    const { title, duration, views, author, url: videoUrl, thumbnail } = videos[0];
+    // Extract video details
+    const { title, duration, views, author, thumbnail } = videoDetails;
 
     // Create a caption for the response
     const caption = `
 *🎶 Song Name*: ${title}
 🕜 *Duration*: ${duration}
-📻 *Listeners*: ${views}
+📻 *Views*: ${views}
 🎙️ *Artist*: ${author.name}
 
 > 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1
@@ -46,81 +55,44 @@ cmd({
     `;
 
     // Send the thumbnail with the caption
-    await _action.sendMessage(from, { 
-      image: { url: thumbnail }, 
-      caption: caption.trim() 
+    await _action.sendMessage(from, {
+      image: { url: thumbnail },
+      caption: caption.trim()
     }, { quoted: _message });
 
-    // Fetch audio download link using RapidAPI
-    const videoId = extractVideoId(videoUrl);
-    if (!videoId) {
-      return reply('*❌ Invalid YouTube URL. Please provide a valid link.*');
-    }
+    // Notify user of download progress
+    await reply('```⬇️ Downloading audio...```');
 
+    // Fetch MP3 download link using RapidAPI
     const options = {
       method: 'GET',
       url: 'https://youtube-mp36.p.rapidapi.com/dl',
-      params: { id: videoId },
+      params: { id: extractVideoId(videoUrl) },
       headers: {
-        'X-RapidAPI-Key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8', // Use API key from .env file
-        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
-      },
-      timeout: 5000, // Reduce timeout to 5 seconds
+        'X-RapidAPI-Key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8', // Replace with your actual API key
+        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+      }
     };
 
-    // Get download link from API
     const response = await axios.request(options);
 
     if (response.data.status === 'ok') {
-      // Create safe filename
-      const safeTitle = response.data.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const fileName = `${safeTitle}.mp3`;
-      const destinationFolder = './Downloads'; // Define destination folder
-      if (!fs.existsSync(destinationFolder)) {
-        fs.mkdirSync(destinationFolder, { recursive: true });
-      }
-      const filePath = path.join(destinationFolder, fileName);
+      const { link } = response.data;
 
-      // Download the file and send it simultaneously using streams
-      const mp3Response = await axios({
-        method: 'GET',
-        url: response.data.link,
-        responseType: 'stream',
-      });
-
-      // Create a write stream to save the file
-      const writer = fs.createWriteStream(filePath);
-
-      // Send the audio file while downloading
+      // Send the audio file
       await _action.sendMessage(from, {
-        audio: { stream: mp3Response.data }, // Stream the audio directly
-        mimetype: 'audio/mpeg'
+        audio: { url: link },
+        mimetype: 'audio/mpeg',
+        filename: `${title}.mp3`
       }, { quoted: _message });
 
-      // Save the file to disk
-      await pipeline(mp3Response.data, writer);
-
-      console.log(`Download complete: ${filePath}`);
-
-      // Delete the file after sending
-      fs.unlinkSync(filePath);
-      console.log(`File deleted: ${filePath}`);
-
+      await reply('*✅ Audio downloaded successfully!*');
     } else {
       throw new Error(response.data.msg || 'Failed to get download link');
     }
-
   } catch (error) {
-    // Log the error and notify the user
     console.error('Error:', error.message);
-    if (error.response) {
-      console.error('API response error:', error.response.data);
-    } else if (error.request) {
-      console.error('API request error:', error.request);
-    } else {
-      console.error('Error:', error.message);
-    }
-    reply('*❌ An unexpected error occurred. Please try again later.*');
+    reply('*❌ An error occurred. Please try again later.*');
   }
 });
 
@@ -136,4 +108,4 @@ function extractVideoId(url) {
   }
 
   return videoId;
-        }
+}
