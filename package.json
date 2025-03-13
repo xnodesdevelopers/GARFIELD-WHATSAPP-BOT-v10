@@ -18,6 +18,7 @@
     "@dark-yasiya/yt-dl.js": "1.0.5",
     "@distube/ytdl-core": "latest",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@google/generative-ai": "latest",
     "@mrnima/facebook-downloader": "1.0.0",
     "@mrnima/tiktok-downloader": "1.0.0",
     "@vitalets/google-translate-api": "^9.2.0",
