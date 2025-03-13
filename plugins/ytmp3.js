@@ -15,7 +15,7 @@ cmd({
     if (!q) return await reply('*Please provide a video name or link!*');
 
     // Notify user of search progress
-    await reply('```🔍 Searching for the audio... 🎵```');
+    await reply('```🔍 Searching for the Song... 🎵```');
 
     // Fetch search results and extract details of the first result
     const { videos } = await yts(q);
