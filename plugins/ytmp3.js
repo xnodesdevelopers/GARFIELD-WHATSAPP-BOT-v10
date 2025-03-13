@@ -4,7 +4,7 @@ const fetch = require('node-fetch'); // API requests
 const { promisify } = require('util');
 const stream = require('stream');
 const pipeline = promisify(stream.pipeline);
-require('dotenv').config();
+
 
 // Cache for storing search results and download links
 const cache = new Map();
