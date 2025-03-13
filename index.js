@@ -35,6 +35,7 @@ const {
   const StickersTypes = require('wa-sticker-formatter')
   const util = require('util')
   const { sms, downloadMediaMessage, AntiDelete } = require('./lib')
+  const { GoogleGenerativeAI } = require("@google/generative-ai")
   const FileType = require('file-type');
   const axios = require('axios')
   const { File } = require('megajs')
@@ -42,7 +43,6 @@ const {
   const bodyparser = require('body-parser')
   const os = require('os')
   const Crypto = require('crypto')
-  const { GoogleGenerativeAI } = require("@google/generative-ai")
   const path = require('path')
   const prefix = config.PREFIX
   
@@ -306,61 +306,65 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
       }
   }
           
-// custum react settings        
- 
-
-
-// Google Gemini API Key
-// API Key එක environment variable එකකින් ගන්න එක ආරක්ෂිතයි
-
-// Replace with your actual API key or use environment variables
 const GEMINI_API_KEY = "AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI"; // Use environment variables in production
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Use the correct model name
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+const model = await genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-  // Check if the message is from a group or starts with a specific character
-  const aitext = body; // Get the user's message text
-  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
-    // Prepare the Sinhala prompt for Gemini API
-    const prompt = `ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න \nඔබේ විස්තර (ඔබේ නම :Garfield , ඔබ Whatsapp Ai බොට් කෙනෙක් , ඔබව හැදුවේ Tharindu Liyanage(සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න , ඔබ තරුණයෙක් කියල සිතන්න , තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න ,Funny , friendly , creative , emotional ,lovely වෙන්න ,සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න , use meaningful creative emojies , Bot කෙනෙක් කියල හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න , කලින් හොඳින් අඳුරන ආකාරයට සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා , ඇහුවොත් පමණක් ඔබ Garfield Whatsapp Ai සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න ) සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න, Hi වැනි reply දෙන්න එපා message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න , (සිරාවට = seriously , funny = ආතල් , you = ඔයා ) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න , creative විහිලු කරන්න   \n\n**Variables:**\n- Sender ගෙ නම(පළමු නම භාවිතා කරන්න): ${pushname}\n- Senderගෙ පණිවුඩය : ${aitext} \n ඔබේ reply එක දෙන්න\n\n\n--`;
+const aitext = body; // Get the user's message text
 
-    try {
-      // Call Gemini API
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: `${pushname}`,
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          maxOutputTokens: 1000,
-          temperature: 0.1,
+// Check if the message is from a group or starts with a specific character
+if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith(".")) {
+  // Prepare the Sinhala prompt for Gemini API
+  const prompt = `
+    ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න 
+    ඔබේ විස්තර (ඔබේ නම : Garfield , ඔබ Whatsapp Ai බොට් කෙනෙක් , 
+    ඔබව හැදුවේ Tharindu Liyanage(සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න , 
+    ඔබ තරුණයෙක් කියල සිතන්න , තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, 
+    Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න , Funny , friendly , creative , emotional , lovely වෙන්න , 
+    සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න , use meaningful creative emojies , 
+    Bot කෙනෙක් කියල හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න , කලින් හොඳින් අඳුරන ආකාරයට 
+    සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා , 
+    ඇහුවොත් පමණක් ඔබ Garfield Whatsapp Ai සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න ) 
+    සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න, Hi වැනි reply දෙන්න එපා 
+    message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, 
+    ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න , 
+    (සිරාවට = seriously , funny = ආතල් , you = ඔයා ) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න , creative විහිලු කරන්න.
+    
+    **Variables:**
+    - Senderගේ නම(පළමු නම භාවිතා කරන්න): ${pushname}
+    - Senderගේ පණිවුඩය: ${aitext}
+    ඔබේ reply එක දෙන්න.
+  `;
+
+  try {
+    // Call Gemini API
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: `${pushname}`,
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
         },
-      });
+      ],
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.1,
+      },
+    });
 
-      // Extract the AI response
-      const aiResponse = result.response.candidates[0].content.parts[0].text;
-      await reply(`${aiResponse}`);
-    } catch (error) {
-      console.error("Error calling Gemini API:", error);
-      await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
-    }
+    // Extract the AI response
+    const aiResponse = result.response.candidates[0]?.content?.parts[0]?.text || "No response received.";
+    await reply(aiResponse);
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
   }
-
-
-// Example usage
-
-
- 
- 
-
+}
 //Menu 
  if (body === '.menu' || body === '.Menu' || body === '.alive' || body === '.Alive') 
   {     
