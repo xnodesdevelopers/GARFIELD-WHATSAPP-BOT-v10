@@ -1,74 +1,62 @@
 const { cmd } = require('../command');
-const axios = require('axios'); // API requests
-const yts = require('yt-search'); // YouTube search functionality
-
-// Configure Axios for better performance
-const axiosInstance = axios.create({
-  timeout: 30000,
-  headers: {
-    'Connection': 'keep-alive',
-  },
-  http2: true, // Enable HTTP/2
-});
+const yts = require('yt-search'); // YouTube video search
+const fetch = require('node-fetch'); // API requests
 
 cmd({
-  pattern: "song",
-  react: "🎶",
-  desc: "Download YouTube songs based on keywords.",
-  category: "main",
-  use: ".audio <song name or keywords>",
-  filename: __filename,
-}, async (_action, _message, _args, { from, q, reply, conn }) => {
+    pattern: "audio",
+    react: "🎵",
+    desc: "Download YouTube audio using keywords.",
+    category: "main",
+    use: ".audio <title or keywords>",
+    filename: __filename,
+}, async (_action, _message, _args, { from, q, reply }) => {
   try {
-    // Ensure user input is valid
-    if (!q || typeof q !== 'string') {
-      return await reply('*Please provide a song name or keywords!*');
-    }
+    // Validate input
+    if (!q) return await reply('*Please provide a video name or link!*');
 
-    reply('```🔍 Searching and Processing... 🎶```');
+    // Notify user of search progress
+    await reply('```🔍 Searching for the audio... 🎵```');
 
-    // Perform parallel operations: YouTube search + Initial thumbnail preparation
+    // Fetch search results
     const { videos } = await yts(q);
-    if (!videos || !videos.length) {
-      return reply('*No results found! Try different keywords.*');
-    }
+    if (!videos.length) return reply('*No results found! Try different keywords.*');
 
+    // Extract details of the first result
     const { title, duration, views, author, url: videoUrl, thumbnail } = videos[0];
 
-    const apiUrl = `https://apis.davidcyriltech.my.id/youtube/mp3?url=${encodeURIComponent(videoUrl)}`;
+    const audioInfo = `*🎶 Song Name* - ${title}\n🕜 *Duration* - ${duration}\n📻 *Listerners* - ${views}\n *🎙️ Artist* - ${author}\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Тv10.1\n> File Name ${title}.mp3`;
 
-    // Fetch API response and send thumbnail in parallel
-    const [apiResponse, thumbnailSend] = await Promise.all([
-      axiosInstance.get(apiUrl).catch(async (error) => {
-        console.error('API request failed:', error);
-        throw new Error('API request failed');
-      }),
-      conn.sendMessage(from, { 
-        image: { url: thumbnail },
-        caption: `*🎶 Song Name* - ${title}
-🕜 *Duration* - ${duration}
-📻 *Listeners* - ${views}
-🎙️ *Artist* - ${author}
-> **GΛRFIELD BOTv10.1**
-> File Name: ${title}.mp3`
-      })
-    ]);
+    // Fetch audio download link with a timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10-second timeout
 
-    if (apiResponse.status !== 200 || !apiResponse.data.success || !apiResponse.data.result?.downloadUrl) {
-      return reply('*API ERROR: Audio unavailable.*');
+    const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/youtube/mp3?url=${encodeURIComponent(videoUrl)}`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout); // Clear the timeout if the request completes
+
+    const { success, result } = await apiResponse.json();
+
+    if (!apiResponse.ok || !success || !result?.downloadUrl) {
+      return reply('*Failed to fetch the audio. Please try again later.*');
     }
 
-    const { downloadUrl } = apiResponse.data.result;
-
-    // Send the audio file
-    await _action.sendMessage(from, {
-      audio: { url: downloadUrl },
-      mimetype: 'audio/mpeg',
-      fileName: `${title}.mp3`
-    }, { quoted: _message });
+    // Send audio and metadata concurrently
+    await Promise.all([
+      _action.sendMessage(from, {
+        audio: { url: result.downloadUrl },
+        mimetype: 'audio/mpeg',
+        caption: audioInfo
+      }, { quoted: _message })
+    ]);
 
   } catch (error) {
-    console.error('Error occurred:', error);
-    reply('*❌ An unexpected error occurred! Please try again later.*');
+    console.error('Error:', error);
+    if (error.name === 'AbortError') {
+      reply('*❌ Request timed out. Please try again later.*');
+    } else {
+      reply('*❌ An unexpected error occurred. Please try again later.*');
+    }
   }
 });
