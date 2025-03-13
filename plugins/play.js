@@ -15,7 +15,7 @@ cmd({
     if (!q) return await reply('*Please provide a video name or link!*');
 
     // Notify user of search progress
-    await reply('```Searching Song... 🔎```');
+    
     await reply('```Downloading Song 🎵⬇️```');
 
     // Fetch search results
@@ -43,7 +43,7 @@ cmd({
     if (!apiResponse.ok || !success || !result?.downloadUrl) {
       return reply('*Failed to fetch the audio. Please try again later.*');
     }
-await reply('```Uploading Song ⬆️```');
+
     // Send audio and metadata
     await _action.sendMessage(from, {
       document: { url: result.downloadUrl },
