@@ -318,7 +318,7 @@ const GEMINI_API_KEY = "AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI"; // Use environ
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // Use the correct model name
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   // Check if the message is from a group or starts with a specific character
   const aitext = body; // Get the user's message text
