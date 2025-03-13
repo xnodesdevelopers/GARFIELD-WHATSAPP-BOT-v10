@@ -9,7 +9,7 @@ cmd({
     category: "main",
     use: ".song <title or keywords>",
     filename: __filename,
-}, async (_action, _message, _args, { from, q, reply, conn }) => {
+}, async (_action, _message, _args, { from, q, reply }) => {
   try {
     // Validate input
     if (!q) {
@@ -41,7 +41,7 @@ cmd({
     `;
 
     // Send the thumbnail with the caption
-    await conn.sendMessage(from, { 
+    await _action.sendMessage(from, { 
       image: { url: thumbnail }, 
       caption: caption.trim() 
     }, { quoted: _message });
@@ -56,10 +56,9 @@ cmd({
     }
 
     // Send the audio file
-    await conn.sendMessage(from, {
+    await _action.sendMessage(from, {
       audio: { url: jsonResponse.result.downloadUrl },
-      mimetype: 'audio/mpeg',
-      caption: caption.trim()
+      mimetype: 'audio/mpeg'
     }, { quoted: _message });
   } catch (error) {
     // Log the error and notify the user
