@@ -25,7 +25,7 @@ cmd({
     const { title, duration, views, author, url: videoUrl, thumbnail } = videos[0];
 
     const audioInfo = `*🎶 Song Name* - ${title}\n🕜 *Duration* - ${duration}\n📻 *Listerners* - ${views}\n *🎙️ Artist* - ${author}\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Тv10.1\n> File Name ${title}.mp3`;
-
+          await conn.sendMessage(from, { image: { url: thumbnail}, caption: audioInfo });
     // Fetch audio download link with a timeout
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000); // 10-second timeout
