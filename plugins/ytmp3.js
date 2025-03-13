@@ -3,7 +3,7 @@ const yts = require('yt-search'); // YouTube video search
 const fetch = require('node-fetch'); // API requests
 
 cmd({
-    pattern: "audio",
+    pattern: "song",
     react: "🎵",
     desc: "Download YouTube audio using keywords.",
     category: "main",
