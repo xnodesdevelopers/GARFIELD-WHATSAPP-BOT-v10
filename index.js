@@ -312,52 +312,50 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
 
 // Google Gemini API Key
 // API Key එක environment variable එකකින් ගන්න එක ආරක්ෂිතයි
-const genAI = new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-// Define the function to handle incoming messages
+// Replace with your actual API key or use environment variables
+const GEMINI_API_KEY = "AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI"; // Use environment variables in production
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Use the correct model name
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+  // Check if the message is from a group or starts with a specific character
   const aitext = body; // Get the user's message text
-
-  // Check if the message is NOT from a group
   if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
     // Prepare the Sinhala prompt for Gemini API
-   // Prepare the Sinhala prompt for the Gemini API
-const prompt = `
-ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න 
-ඔබේ විස්තර (ඔබේ නම: Garfield, ඔබ Whatsapp AI බොට් කෙනෙක්, ඔබව හැදුවේ Tharindu Liyanage (සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න, 
-ඔබ තරුණයෙක් කියලා සිතන්න, තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න, 
-Funny, friendly, creative, emotional, lovely වෙන්න, සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න, 
-use meaningful creative emojis, Bot කෙනෙක් කියලා හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න, 
-කලින් හොඳින් අඳුරන ආකාරයට සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා, 
-ඇහුවොත් පමණක් ඔබ Garfield Whatsapp AI සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න)
-සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න. Hi වැනි reply දෙන්න එපා, 
-message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න, 
-(සිරාවට = seriously, funny = ආතල්, you = ඔයා) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න, creative විහිලු කරන්න. 
+    const prompt = `ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න \nඔබේ විස්තර (ඔබේ නම :Garfield , ඔබ Whatsapp Ai බොට් කෙනෙක් , ඔබව හැදුවේ Tharindu Liyanage(සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න , ඔබ තරුණයෙක් කියල සිතන්න , තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න ,Funny , friendly , creative , emotional ,lovely වෙන්න ,සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න , use meaningful creative emojies , Bot කෙනෙක් කියල හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න , කලින් හොඳින් අඳුරන ආකාරයට සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා , ඇහුවොත් පමණක් ඔබ Garfield Whatsapp Ai සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න ) සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න, Hi වැනි reply දෙන්න එපා message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න , (සිරාවට = seriously , funny = ආතල් , you = ඔයා ) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න , creative විහිලු කරන්න   \n\n**Variables:**\n- Sender ගෙ නම(පළමු නම භාවිතා කරන්න): ${pushname}\n- Senderගෙ පණිවුඩය : ${aitext} \n ඔබේ reply එක දෙන්න\n\n\n--`;
 
-**Variables:**
-- Senderගේ නම (පළමු නම භාවිතා කරන්න): ${pushname}
-- Senderගේ පණිවිඩය: ${aitext} 
-ඔබේ reply එක දෙන්න.
-`;
+    try {
+      // Call Gemini API
+      const result = await model.generateContent({
+        contents: [
+          {
+            role: `${pushname}`,
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 1000,
+          temperature: 0.1,
+        },
+      });
 
-try {
-  // Call the Gemini API with the prepared prompt
-  const result = await model.generateContent(prompt);
-
-  // Check if the response is valid
-  if (!result?.response?.text) {
-    console.error("Garfield AI response not found.");
-    return reply("❌ Unable to get a response from Garfield AI. 😢");
+      // Extract the AI response
+      const aiResponse = result.response.candidates[0].content.parts[0].text;
+      await reply(`${aiResponse}`);
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
+    }
   }
 
-  // Reply with the AI's response
-  await reply(result.response.text);
-} catch (error) {
-  // Handle errors during the API call
-  console.error("Error calling Gemini API:", error);
-  reply("❌ Unable to get a response from Garfield AI. 😢");
-}
-  }
+
+// Example usage
 
 
  
