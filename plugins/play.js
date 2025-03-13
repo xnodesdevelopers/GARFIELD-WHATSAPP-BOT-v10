@@ -32,7 +32,7 @@ cmd({
 📻 *Listeners* - ${views}
 🎙️ *Artist* - ${author.name}
 
-> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 �𝖡𝖮Т v10.1
+> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1
 > File Name: ${title}.mp3
     `;
 
@@ -48,6 +48,7 @@ cmd({
     await _action.sendMessage(from, {
       document: { url: result.downloadUrl },
       mimetype: 'audio/mpeg',
+      filename : `${title}.mp3`,
       caption: caption.trim()
     }, { quoted: _message });
 
