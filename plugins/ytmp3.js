@@ -1,98 +1,81 @@
 const { cmd } = require('../command'); // Command handler for the bot
+const fetch = require('node-fetch'); // For making API requests
 const yts = require('yt-search'); // For searching YouTube videos
-const axios = require('axios'); // For making API requests
 
 cmd({
     pattern: "song",
-    react: "🎵",
-    desc: "Download YouTube audio as MP3.",
+    react: "🎶",
+    desc: "Download YouTube audio using keywords.",
     category: "main",
-    use: ".mp3 <YouTube URL or keywords>",
+    use: ".song <title or keywords>",
     filename: __filename,
-}, async (_action, _message, _args, { from, q, reply }) => {
+}, async (_action, _message, _args, { from, q, reply, conn }) => {
   try {
-    // Validate input
-    if (!q) {
-      return await reply('*❌ Please provide a YouTube URL or keywords!*');
+    // 1. Validate user input
+    if (!q || typeof q !== 'string') {
+      return await reply('*❌ Please provide a song name or keywords!*');
     }
 
-    // Notify user of search progress
-    await reply('```🔍 Searching for the video...```');
+    // 2. Notify user of search progress
+    await reply('```🔍 Searching for the song... 🎶```');
 
-    // Extract video URL or search for video using keywords
-    let videoUrl = q;
-    let videoDetails = null;
-
-    if (!q.includes('youtube.com/watch') && !q.includes('youtu.be/')) {
-      // Search YouTube using keywords
-      const searchResults = await yts(q);
-      const videos = searchResults.videos;
-
-      if (!videos || !videos.length) {
-        return reply('*❌ No results found! Try different keywords.*');
-      }
-
-      videoDetails = videos[0]; // Use the first result's details
-      videoUrl = videoDetails.url;
-    } else {
-      // Fetch video details using yt-search
-      const videoInfo = await yts({ videoId: extractVideoId(q) });
-      videoDetails = videoInfo;
+    // 3. Search YouTube using keywords
+    const { videos } = await yts(q);
+    if (!videos || !videos.length) {
+      return reply('*❌ No results found! Try different keywords.*');
     }
 
-    // Extract video details
-    const { title, duration, views, author, thumbnail } = videoDetails;
+    // 4. Extract details of the first video
+    const { title, duration, views, author, url: videoUrl, thumbnail } = videos[0];
 
-    // Create a caption for the response
+    // 5. Create a caption for the response
     const caption = `
 *🎶 Song Name*: ${title}
 🕜 *Duration*: ${duration}
-📻 *Views*: ${views}
+📻 *Listeners*: ${views}
 🎙️ *Artist*: ${author.name}
 
 > 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1
 > File Name: ${title}.mp3
     `;
 
-    // Send the thumbnail with the caption
-    await _action.sendMessage(from, {
+    // 6. Send the thumbnail with the caption
+    await conn.sendMessage(from, {
       image: { url: thumbnail },
       caption: caption.trim()
     }, { quoted: _message });
 
-    // Notify user of download progress
-    await reply('```⬇️ Downloading audio...```');
-
-    // Fetch MP3 download link using RapidAPI
+    // 7. Fetch audio download link using RapidAPI
+    const videoId = extractVideoId(videoUrl);
+    const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`;
     const options = {
       method: 'GET',
-      url: 'https://youtube-mp36.p.rapidapi.com/dl',
-      params: { id: extractVideoId(videoUrl) },
       headers: {
-        'X-RapidAPI-Key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8', // Replace with your actual API key
-        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+        'x-rapidapi-key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8', // Replace with your actual API key
+        'x-rapidapi-host': 'youtube-mp36.p.rapidapi.com'
       }
     };
 
-    const response = await axios.request(options);
-
-    if (response.data.status === 'ok') {
-      const { link } = response.data;
-
-      // Send the audio file
-      await _action.sendMessage(from, {
-        audio: { url: link },
-        mimetype: 'audio/mpeg',
-        filename: `${title}.mp3`
-      }, { quoted: _message });
-
-      await reply('*✅ Audio downloaded successfully!*');
-    } else {
-      throw new Error(response.data.msg || 'Failed to get download link');
+    const response = await fetch(apiUrl, options);
+    if (!response.ok) {
+      return reply('*❌ Failed to fetch the audio. Please try again later.*');
     }
+
+    const result = await response.json();
+    if (result.status !== 'ok' || !result.link) {
+      return reply('*❌ Audio unavailable. Please try a different video.*');
+    }
+
+    // 8. Send the audio file
+    await _action.sendMessage(from, {
+      audio: { url: result.link },
+      mimetype: 'audio/mpeg',
+      fileName: `${title}.mp3`
+    }, { quoted: _message });
+
   } catch (error) {
     console.error('Error:', error.message);
-    reply('*❌ An error occurred. Please try again later.*');
+    reply('*❌ An unexpected error occurred. Please try again later.*');
   }
 });
 
@@ -108,4 +91,4 @@ function extractVideoId(url) {
   }
 
   return videoId;
-}
+                                 }
