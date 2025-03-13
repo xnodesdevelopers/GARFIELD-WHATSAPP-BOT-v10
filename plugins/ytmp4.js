@@ -15,7 +15,7 @@ cmd({
     if (!q) return await reply('*Please provide a video name or link!*');
 
     // Notify user of search progress
-    reply('```🔍 Searching for the video... 🎥```');
+    await reply('```🔍 Searching for the video... 🎥```');
 
     // Fetch search results
     const { videos } = await yts(q);
@@ -26,8 +26,16 @@ cmd({
 
     const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
 
-    // Fetch video download link
-    const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`);
+    // Fetch video download link with a timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10-second timeout
+
+    const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`, {
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout); // Clear the timeout if the request completes
+
     const { success, result } = await apiResponse.json();
 
     if (!apiResponse.ok || !success || !result?.download_url) {
@@ -45,6 +53,10 @@ cmd({
 
   } catch (error) {
     console.error('Error:', error);
-    reply('*❌ An unexpected error occurred. Please try again later.*');
+    if (error.name === 'AbortError') {
+      reply('*❌ Request timed out. Please try again later.*');
+    } else {
+      reply('*❌ An unexpected error occurred. Please try again later.*');
+    }
   }
 });
