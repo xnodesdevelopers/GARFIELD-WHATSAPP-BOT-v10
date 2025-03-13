@@ -12,8 +12,6 @@ cmd({
 }, async (_action, _message, _args, { from, q, reply }) => {
   try {
     if (!q) return await reply('*Enter Name or Link*');
-
- for videos using yt-search
     reply('```🔍 Searching for the video... 🎥```');
     const searchResults = await yts(q);
     if (!searchResults.videos.length) return reply('No results found!');
