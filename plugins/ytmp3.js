@@ -91,7 +91,7 @@ cmd({
         'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8',
         'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
       },
-      timeout: 15000 // Add timeout to prevent hanging requests
+      timeout: 50000 // Add timeout to prevent hanging requests
     };
     
     try {
@@ -110,7 +110,7 @@ cmd({
           method: 'GET',
           url: response.data.link,
           responseType: 'stream',
-          timeout: 30000 // Add timeout for download
+          timeout: 50000 // Add timeout for download
         });
         
         // Send the audio file to the user
