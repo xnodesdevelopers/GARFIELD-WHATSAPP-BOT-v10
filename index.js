@@ -316,7 +316,7 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
 // Replace with your actual API key or use environment variables
 const genAI = new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI");
 // Use the correct model name
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-thinking-exp-01-21" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   // Check if the message is from a group or starts with a specific character
   const aitext = body; // Get the user's message text
