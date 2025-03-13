@@ -9,7 +9,7 @@ cmd({
     category: "main",
     use: ".song <title or keywords>",
     filename: __filename,
-}, async (_action, _message, _args, { from, q, reply, conn }) => {
+}, async (_action, _message, _args, { from, q, reply }) => {
   try {
     // 1. Validate user input
     if (!q || typeof q !== 'string') {
@@ -40,14 +40,14 @@ cmd({
     `;
 
     // 6. Send the thumbnail with the caption
-    await conn.sendMessage(from, {
+    await _action.sendMessage(from, {
       image: { url: thumbnail },
       caption: caption.trim()
     }, { quoted: _message });
 
     // 7. Fetch audio download link using RapidAPI
     const videoId = extractVideoId(videoUrl);
-    const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${videoId}`;
+    const apiUrl = `https://youtube-mp36.p.rapidapi.com/dl?id=${encodeURIComponent(videoId)}`;
     const options = {
       method: 'GET',
       headers: {
@@ -91,4 +91,4 @@ function extractVideoId(url) {
   }
 
   return videoId;
-                                 }
+             }
