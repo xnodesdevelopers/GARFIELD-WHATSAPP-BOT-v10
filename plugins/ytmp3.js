@@ -15,7 +15,7 @@ cmd({
     if (!q) return await reply('*Please provide a video name or link!*');
 
     // Notify user of search progress
-    await reply('```🔍 Searching for the song... 🎵```');
+    await reply('```🔍 Searching for the audio... 🎵```');
 
     // Fetch search results and extract details of the first result
     const { videos } = await yts(q);
@@ -33,12 +33,11 @@ cmd({
 > File Name: ${title}.mp3
     `;
 
-    // Fetch audio download link and send thumbnail concurrently
-    const [apiResponse] = await Promise.all([
-      fetch(`https://apis.davidcyriltech.my.id/youtube/mp3?url=${encodeURIComponent(videoUrl)}`),
-      conn.sendMessage(from, { image: { url: thumbnail }, caption: caption.trim() }, { quoted: _message })
-    ]);
+    // Send thumbnail with caption
+    await conn.sendMessage(from, { image: { url: thumbnail }, caption: caption.trim() }, { quoted: _message });
 
+    // Fetch audio download link
+    const apiResponse = await fetch(`https://apis.davidcyriltech.my.id/youtube/mp3?url=${encodeURIComponent(videoUrl)}`);
     const { success, result } = await apiResponse.json();
 
     if (!apiResponse.ok || !success || !result?.downloadUrl) {
@@ -46,7 +45,7 @@ cmd({
     }
 
     // Send audio file
-    await _action.sendMessage(from, {
+    await conn.sendMessage(from, {
       audio: { url: result.downloadUrl },
       mimetype: 'audio/mpeg',
       caption: caption.trim()
