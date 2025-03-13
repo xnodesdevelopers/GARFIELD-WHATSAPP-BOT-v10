@@ -1,10 +1,9 @@
 const { cmd } = require('../command');
 const yts = require('yt-search'); // YouTube video search
-const fetch = require('node-fetch'); // API requests
+const axios = require('axios'); // API requests
 const { promisify } = require('util');
 const stream = require('stream');
 const pipeline = promisify(stream.pipeline);
-
 
 // Cache for storing search results and download links
 const cache = new Map();
@@ -17,92 +16,67 @@ cmd({
     use: ".song <title or keywords>",
     filename: __filename,
 }, async (_action, _message, _args, { from, q, reply }) => {
-  try {
-    // Validate input
-    if (!q) {
-      return await reply('*❌ Please provide a video name or link!*');
+    try {
+        if (!q) {
+            return await reply('*❌ Please provide a video name or link!*');
+        }
+
+        // Use cached result if available
+        if (cache.has(q)) {
+            const { thumbnail, caption, audioUrl } = cache.get(q);
+            await Promise.all([
+                _action.sendMessage(from, { image: { url: thumbnail }, caption: caption.trim() }, { quoted: _message }),
+                _action.sendMessage(from, { audio: { url: audioUrl }, mimetype: 'audio/mpeg' }, { quoted: _message })
+            ]);
+            return;
+        }
+
+        await reply('```🔍 Searching for the Song... 🎵```');
+
+        // Fetch YouTube video details
+        const searchResults = await yts(q);
+        const video = searchResults.videos[0];
+        if (!video) return reply('*❌ No results found! Try different keywords.*');
+
+        const { title, duration, views, author, url: videoUrl, thumbnail } = video;
+        const caption = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3\n        `;
+
+        await _action.sendMessage(from, { image: { url: thumbnail }, caption: caption.trim() }, { quoted: _message });
+
+        const videoId = extractVideoId(videoUrl);
+        if (!videoId) return reply('*❌ Invalid YouTube URL.*');
+
+        const audioUrl = await fetchDownloadLink(videoId);
+        if (!audioUrl) return reply('*❌ Failed to fetch download link.*');
+
+        // Cache for future requests
+        cache.set(q, { thumbnail, caption, audioUrl });
+
+        await _action.sendMessage(from, { audio: { url: audioUrl }, mimetype: 'audio/mpeg' }, { quoted: _message });
+    } catch (error) {
+        reply('*❌ An unexpected error occurred. Please try again later.*');
     }
-
-    // Check cache for existing results
-    if (cache.has(q)) {
-      const { thumbnail, caption, audioUrl } = cache.get(q);
-      await _action.sendMessage(from, { image: { url: thumbnail }, caption: caption.trim() }, { quoted: _message });
-      await _action.sendMessage(from, { audio: { url: audioUrl }, mimetype: 'audio/mpeg' }, { quoted: _message });
-      return;
-    }
-
-    // Notify user of search progress
-    await reply('```🔍 Searching for the Song... 🎵```');
-
-    // Fetch search results and extract details of the first result
-    const searchResults = await yts(q);
-    const videos = searchResults.videos;
-
-    if (!videos || !videos.length) {
-      return reply('*❌ No results found! Try different keywords.*');
-    }
-
-    const { title, duration, views, author, url: videoUrl, thumbnail } = videos[0];
-
-    // Create a caption for the response
-    const caption = `
-*🎶 Song Name*: ${title}
-🕜 *Duration*: ${duration}
-📻 *Listeners*: ${views}
-🎙️ *Artist*: ${author.name}
-
-> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1
-> File Name: ${title}.mp3
-    `;
-
-    // Send the thumbnail with the caption
-    await _action.sendMessage(from, { 
-      image: { url: thumbnail }, 
-      caption: caption.trim() 
-    }, { quoted: _message });
-
-    // Fetch audio download link using RapidAPI
-    const apiResponse = await fetch(`https://youtube-mp36.p.rapidapi.com/dl?id=${extractVideoId(videoUrl)}`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8', // Use API key from .env file
-        'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com',
-      },
-    });
-
-    const jsonResponse = await apiResponse.json();
-
-    // Validate the API response
-    if (!apiResponse.ok || jsonResponse.status !== 'ok' || !jsonResponse.link) {
-      return reply('*❌ Failed to fetch the audio. Please try again later.*');
-    }
-
-    // Cache the results for future use
-    cache.set(q, { thumbnail, caption, audioUrl: jsonResponse.link });
-
-    // Send the audio file
-    await _action.sendMessage(from, {
-      audio: { url: jsonResponse.link },
-      mimetype: 'audio/mpeg'
-    }, { quoted: _message });
-
-  } catch (error) {
-    // Log the error and notify the user
-    console.error('Error:', error.message);
-    reply('*❌ An unexpected error occurred. Please try again later.*');
-  }
 });
 
-// Helper function to extract video ID from YouTube URL
+// Helper: Fetch audio link from API
+async function fetchDownloadLink(videoId) {
+    const options = {
+        method: 'GET',
+        url: 'https://youtube-mp36.p.rapidapi.com/dl',
+        params: { id: videoId },
+        headers: {
+            'X-RapidAPI-Key': '7c7eba5fb4msh5e7cf6b63765c19p1af119jsnc21557099ba8',
+            'X-RapidAPI-Host': 'youtube-mp36.p.rapidapi.com'
+        },
+        timeout: 20000
+    };
+
+    const { data } = await axios.request(options);
+    return data.status === 'ok' ? data.link : null;
+}
+
+// Helper: Extract YouTube video ID
 function extractVideoId(url) {
-  let videoId = '';
-
-  if (url.includes('youtube.com/watch')) {
-    const urlObj = new URL(url);
-    videoId = urlObj.searchParams.get('v');
-  } else if (url.includes('youtu.be/')) {
-    videoId = url.split('youtu.be/')[1].split('?')[0];
-  }
-
-  return videoId;
-      }
+    const match = url.match(/(?:youtube\.com\/.*v=|youtu\.be\/)([^&]+)/);
+    return match ? match[1] : null;
+            }
