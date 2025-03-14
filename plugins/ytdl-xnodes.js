@@ -331,7 +331,7 @@ cmd(
       await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
 
       // Stream audio directly without saving to a file
-      const audioStream = ytdl(videoUrl, ytdlOptions { quality: "highestaudio" });
+      const audioStream = ytdl(videoUrl, ytdlOptions, { quality: "highestaudio" });
       const ffmpegStream = ffmpeg(audioStream)
         .audioBitrate(128)
         .format("mp3")
