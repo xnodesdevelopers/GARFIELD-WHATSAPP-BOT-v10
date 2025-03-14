@@ -1,21 +1,26 @@
+audio is not working , fix it and fast working yt audio 
 const { cmd } = require("../command");
 const ytdl = require("@distube/ytdl-core");
 const yts = require("yt-search");
 const fs = require("fs");
 const { promisify } = require("util");
-const Bottleneck = require("bottleneck");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegStatic = require("ffmpeg-static");
 
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const readFile = promisify(fs.readFile);
 
-// Rate limiter
+// Set FFmpeg path
+ffmpeg.setFfmpegPath(ffmpegStatic);
+
+// Rate limiter to avoid too many requests
 const limiter = new Bottleneck({
-  minTime: 1000,
+  minTime: 1000, // 1 request per second
 });
 
-// Cookies array (empty since you fixed it)
-const cookies = [
+// Load cookies from cookies.json
+const cookies =  [
 
   {
     domain: ".youtube.com",
@@ -269,150 +274,180 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }];
+  } 
+]
 const agent = ytdl.createAgent(cookies);
 
+// Custom headers to mimic a browser request
 const ytdlOptions = {
   headers: {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept":
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
   },
-  agent,
-  requestOptions: {
-    timeout: 30000, // 30 seconds timeout
-  }
+  agent: agent // Using the agent with cookies
 };
 
+// Helper function to handle errors
+const handleErrors = (reply, errorMsg) => (e) => {
+  console.error(e);
+  reply(errorMsg);
+};
+
+// Helper function to ensure store directory exists
 const ensureStoreDirectory = () => {
   if (!fs.existsSync('./store')) {
     fs.mkdirSync('./store', { recursive: true });
   }
 };
 
-// Audio Download Command
+// Download YouTube audio
 cmd(
   {
     pattern: "song",
     react: "🎶",
-    desc: "Download YouTube audio quickly",
+    desc: "Download YouTube audio by searching for keywords.",
     category: "main",
-    use: ".song <song name>",
+    use: ".audio <song name or keywords>",
     filename: __filename,
   },
   async (conn, mek, msg, { from, args, reply }) => {
     try {
       const searchQuery = args.join(" ");
       if (!searchQuery) {
-        return reply("❗️ Please provide a song name\nExample: .song Despacito");
+        return reply(
+          `❗️ Please provide a song name or keywords. 📝\nExample: .audio Despacito`
+        );
       }
 
-      await ensureStoreDirectory();
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
+      reply("```🔍 Searching for the song... 🎵```");
 
-      // Search for the song
-      reply("```🔍 Searching Song... 🎵```");
+      // Search for the song using yt-search with rate limiting
       const searchResults = await limiter.schedule(() => yts(searchQuery));
-      
-      if (!searchResults?.videos?.length) {
-        return reply(`❌ No results found for "${searchQuery}"`);
+      if (!searchResults.videos.length) {
+        return reply(`❌ No results found for "${searchQuery}". 😔`);
       }
 
-      const { title, duration, views, author, url: videoUrl, thumbnail: image } = searchResults.videos[0];
-      const ytmsg = `*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
+      const { title, duration, views, author, url: videoUrl, image } =
+        searchResults.videos[0];
+      const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
 
       // Send song details with thumbnail
-      await conn.sendMessage(from, { image: { url: image }, caption: ytmsg }, { quoted: mek });
+      await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
 
-      // Get video info with retry mechanism
-      let info;
-      try {
-        info = await limiter.schedule(() => 
-          ytdl.getInfo(videoUrl, {
-            ...ytdlOptions,
-            requestOptions: {
-              ...ytdlOptions.requestOptions,
-              maxRetries: 3,
-              backoff: { inc: 1000, max: 5000 }
-            }
-          })
-        );
-      } catch (infoError) {
-        throw new Error(`Failed to get video info: ${infoError.message}`);
-      }
+      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
-      // Filter audio formats
-      const audioFormats = ytdl.filterFormats(info.formats, "audioonly");
-      const audioFormat = audioFormats.find(f => f.audioBitrate >= 128) || audioFormats[0];
-      
-      if (!audioFormat) {
-        return reply("❌ No suitable audio format found");
-      }
+      // Get video info with custom headers
+      const info = await limiter.schedule(() =>
+        ytdl.getInfo(videoUrl, ytdlOptions)
+      );
 
-      // Download audio with improved streaming
-      const audioStream = ytdl.downloadFromInfo(info, {
-        format: audioFormat,
-        quality: "highestaudio",
-        highWaterMark: 1 << 25, // 32MB buffer
-        liveBuffer: 4000,
-        dlChunkSize: 1024 * 1024, // 1MB chunks
-      });
+      // Download audio stream
+      const audioStream = ytdl(videoUrl, { quality: 'highestaudio' });
 
-      // Stream handling with timeout
+      // Use FFmpeg to convert and save the audio
       await new Promise((resolve, reject) => {
-        const writeStream = fs.createWriteStream(tempFileName);
-        audioStream.pipe(writeStream);
-
-        const timeout = setTimeout(() => {
-          audioStream.destroy();
-          writeStream.destroy();
-          reject(new Error("Download timeout after 60s"));
-        }, 60000);
-
-        writeStream.on("finish", () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-
-        writeStream.on("error", (err) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
-
-        audioStream.on("error", (err) => {
-          clearTimeout(timeout);
-          writeStream.destroy();
-          reject(err);
-        });
+        ffmpeg(audioStream)
+          .audioBitrate(128)
+          .save(tempFileName)
+          .on('end', resolve)
+          .on('error', reject);
       });
 
-      // Verify file exists and has content
-      const stats = await fs.promises.stat(tempFileName);
-      if (!stats.size) {
-        throw new Error("Downloaded file is empty");
-      }
-
-      // Send audio
+      // Send the audio file
       await conn.sendMessage(
         from,
         {
-          audio: { url: tempFileName },
+          audio: await readFile(tempFileName),
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
-          ptt: false
         },
         { quoted: mek }
       );
 
+      // Delete the temporary file
+      await unlink(tempFileName);
     } catch (e) {
-      console.error("Error:", e);
-      reply(`❌ Error: ${e.message || "Failed to process audio download"}\nPlease try again`);
-    } finally {
-      // Cleanup
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
-      if (fs.existsSync(tempFileName)) {
-        await unlink(tempFileName).catch(e => console.error("Cleanup error:", e));
+      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
+        e
+      );
+    }
+  }
+);
+// Download YouTube video
+cmd(
+  {
+    pattern: "video",
+    react: "🎥",
+    desc: "Download YouTube video by searching for keywords.",
+    category: "main",
+    use: ".video <video name or keywords>",
+    filename: __filename,
+  },
+  async (conn, mek, msg, { from, args, reply }) => {
+    try {
+      const searchQuery = args.join(" ");
+      if (!searchQuery) {
+        return reply(
+          `❗️ Please provide a video name or keywords. 📝\nExample: .video Despacito`
+        );
       }
+
+      reply("```🔍 Searching for the video... 🎥```");
+
+      // Search for the video using yt-search with rate limiting
+      const searchResults = await limiter.schedule(() => yts(searchQuery));
+      if (!searchResults.videos.length) {
+        return reply(`❌ No results found for "${searchQuery}". 😔`);
+      }
+
+      const { title, duration, views, author, url: videoUrl, image } =
+        searchResults.videos[0];
+      const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
+
+      const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
+
+      // Get video info with custom headers
+      const info = await limiter.schedule(() =>
+        ytdl.getInfo(videoUrl, ytdlOptions)
+      );
+      const videoFormat = ytdl
+        .filterFormats(info.formats, "videoandaudio")
+        .find((f) => f.qualityLabel === "360p");
+      if (!videoFormat) {
+        return reply("❌ No suitable video format found. 😢");
+      }
+
+      // Download video
+      const videoStream = ytdl.downloadFromInfo(info, {
+        quality: videoFormat.itag,
+      });
+      await new Promise((resolve, reject) => {
+        videoStream
+          .pipe(fs.createWriteStream(tempFileName))
+          .on("finish", resolve)
+          .on("error", reject);
+      });
+
+      // Send the video file
+      await conn.sendMessage(
+        from,
+        {
+          video: await readFile(tempFileName),
+          mimetype: "video/mp4",
+          caption: ytmsg,
+        },
+        { quoted: mek }
+      );
+
+      // Delete the temporary file
+      await unlink(tempFileName);
+    } catch (e) {
+      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
+        e
+      );
     }
   }
 );
