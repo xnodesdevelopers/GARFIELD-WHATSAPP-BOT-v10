@@ -12,7 +12,7 @@ const readFile = promisify(fs.readFile);
 // Set FFmpeg path
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
-// Load cookies from cookies.json
+// Custom headers to mimic a browser request
 const cookies = [
 
   {
@@ -281,7 +281,6 @@ const ytdlOptions = {
   },
   agent: agent, // Using the agent with cookies
 };
-
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e);
