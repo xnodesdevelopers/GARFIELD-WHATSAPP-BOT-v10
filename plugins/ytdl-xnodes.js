@@ -301,7 +301,6 @@ if (!fs.existsSync("./store")) {
   fs.mkdirSync("./store");
 }
 
-/
 
 // Command to download YouTube video
 cmd(
@@ -320,15 +319,16 @@ cmd(
         return reply("❗️ Provide video name or keywords.\nExample: .video Despacito");
       }
 
-      reply("🔍 Searching for the video...");
+      reply("```🔍 Searching for the video...```");
 
       const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
+ const { title, duration, views, author, url: videoUrl, thumbnail } =
+        searchResults.videos[0];
+      const ytmsg = `🎬 *Title* - ${title}\n🕜 *Duration* - ${duration}\n👁️ *Views* - ${views}\n👤 *Author* - ${author.name}\n🔗 *Link* - ${videoUrl}`;
 
-      const { title, url: videoUrl, thumbnail } = searchResults.videos[0];
-      reply(`🎥 Downloading *${title}*...`);
 
       const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
       const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
@@ -356,9 +356,9 @@ cmd(
       await conn.sendMessage(
         from,
         {
-          document: videoBuffer,
+          video: videoBuffer,
           mimetype: "video/mp4",
-          caption: `🎬 *Title*: ${title}`,
+          caption: ytmsg,
         },
         { quoted: mek }
       );
@@ -390,15 +390,19 @@ cmd(
         return reply("❗️ Provide song name or keywords.\nExample: .song Despacito");
       }
 
-      reply("🔍 Searching for the song...");
+      reply("```🔍 Searching for the song...```");
 
       const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
 
-      const { title, url: videoUrl } = searchResults.videos[0];
-      reply(`🎶 Downloading *${title}*...`);
+      const { title, duration, views, author, url: videoUrl, thumbnail } =
+        searchResults.videos[0];
+      const ytmsg = `*🎶 Song Name* - ${title}\n*🕜 Duration* - ${duration}\n*📻 Listeners* - ${views}\n*🎙️ Artist* - ${author.name}\n> File Name ${title}.mp3`;
+
+      // Send song details with thumbnail (faster image loading)
+      await conn.sendMessage(from, { image: { url: thumbnail }, caption: ytmsg });
 
       const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
       const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
