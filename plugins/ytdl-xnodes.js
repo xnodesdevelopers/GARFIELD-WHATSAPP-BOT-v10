@@ -5,15 +5,17 @@ const fs = require("fs");
 const { promisify } = require("util");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegStatic = require("ffmpeg-static");
-
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const readFile = promisify(fs.readFile);
+const stream = require("stream");
+const pipeline = promisify(stream.pipeline);
+
 
 // Set FFmpeg path
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
-// Rate limiter to avoid too many requests
+
 // Load cookies from cookies.json
 const cookies =  [
 
@@ -299,6 +301,7 @@ const ensureStoreDirectory = () => {
 };
 
 // Download YouTube audio
+
 cmd(
   {
     pattern: "song",
@@ -319,8 +322,8 @@ cmd(
 
       reply("```🔍 Searching for the song... 🎵```");
 
-      // Search for the song using yt-search with rate limiting
-      const searchResults = await limiter.schedule(() => yts(searchQuery));
+      // Search for the song using yt-search
+      const searchResults = await yts(searchQuery);
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}". 😔`);
       }
@@ -332,46 +335,29 @@ cmd(
       // Send song details with thumbnail
       await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
 
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
+      // Stream audio directly without saving to a file
+      const audioStream = ytdl(videoUrl, { quality: "highestaudio" });
+      const ffmpegStream = ffmpeg(audioStream)
+        .audioBitrate(128)
+        .format("mp3");
 
-      // Get video info with custom headers
-      const info = await limiter.schedule(() =>
-        ytdl.getInfo(videoUrl, ytdlOptions)
-      );
-
-      // Download audio stream
-      const audioStream = ytdl(videoUrl, { quality: 'highestaudio' });
-
-      // Use FFmpeg to convert and save the audio
-      await new Promise((resolve, reject) => {
-        ffmpeg(audioStream)
-          .audioBitrate(128)
-          .save(tempFileName)
-          .on('end', resolve)
-          .on('error', reject);
-      });
-
-      // Send the audio file
+      // Send the audio file directly
       await conn.sendMessage(
         from,
         {
-          audio: await readFile(tempFileName),
+          audio: ffmpegStream,
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
         },
         { quoted: mek }
       );
-
-      // Delete the temporary file
-      await unlink(tempFileName);
     } catch (e) {
-      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
-        e
-      );
+      console.error(e);
+      reply("❌ An error occurred while processing your request. 😢");
     }
   }
 );
-// Download YouTube video
+
 cmd(
   {
     pattern: "video",
@@ -392,8 +378,8 @@ cmd(
 
       reply("```🔍 Searching for the video... 🎥```");
 
-      // Search for the video using yt-search with rate limiting
-      const searchResults = await limiter.schedule(() => yts(searchQuery));
+      // Search for the video using yt-search
+      const searchResults = await yts(searchQuery);
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}". 😔`);
       }
@@ -402,12 +388,8 @@ cmd(
         searchResults.videos[0];
       const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
 
-      const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
-
-      // Get video info with custom headers
-      const info = await limiter.schedule(() =>
-        ytdl.getInfo(videoUrl, ytdlOptions)
-      );
+      // Get video info
+      const info = await ytdl.getInfo(videoUrl);
       const videoFormat = ytdl
         .filterFormats(info.formats, "videoandaudio")
         .find((f) => f.qualityLabel === "360p");
@@ -415,34 +397,24 @@ cmd(
         return reply("❌ No suitable video format found. 😢");
       }
 
-      // Download video
+      // Stream video directly without saving to a file
       const videoStream = ytdl.downloadFromInfo(info, {
         quality: videoFormat.itag,
       });
-      await new Promise((resolve, reject) => {
-        videoStream
-          .pipe(fs.createWriteStream(tempFileName))
-          .on("finish", resolve)
-          .on("error", reject);
-      });
 
-      // Send the video file
+      // Send the video file directly
       await conn.sendMessage(
         from,
         {
-          video: await readFile(tempFileName),
+          video: videoStream,
           mimetype: "video/mp4",
           caption: ytmsg,
         },
         { quoted: mek }
       );
-
-      // Delete the temporary file
-      await unlink(tempFileName);
     } catch (e) {
-      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
-        e
-      );
+      console.error(e);
+      reply("❌ An error occurred while processing your request. 😢");
     }
   }
 );
