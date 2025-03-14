@@ -293,12 +293,7 @@ const handleErrors = (reply, errorMsg) => (e) => {
   reply(errorMsg);
 };
 
-// Helper function to ensure store directory exists
-const ensureStoreDirectory = () => {
-  if (!fs.existsSync('./store')) {
-    fs.mkdirSync('./store', { recursive: true });
-  }
-};
+// Helper function to ensure store directory exist
 
 // Download YouTube audio
 
@@ -339,13 +334,21 @@ cmd(
       const audioStream = ytdl(videoUrl, { quality: "highestaudio" });
       const ffmpegStream = ffmpeg(audioStream)
         .audioBitrate(128)
-        .format("mp3");
+        .format("mp3")
+        .on("error", (err) => {
+          console.error("FFmpeg error:", err);
+          reply("❌ An error occurred during audio conversion. 😢");
+        });
+
+      // Create a PassThrough stream to pipe the output
+      const passThrough = new stream.PassThrough();
+      ffmpegStream.pipe(passThrough);
 
       // Send the audio file directly
       await conn.sendMessage(
         from,
         {
-          audio: ffmpegStream,
+          audio: passThrough,
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
         },
@@ -402,11 +405,15 @@ cmd(
         quality: videoFormat.itag,
       });
 
+      // Create a PassThrough stream to pipe the output
+      const passThrough = new stream.PassThrough();
+      videoStream.pipe(passThrough);
+
       // Send the video file directly
       await conn.sendMessage(
         from,
         {
-          video: videoStream,
+          video: passThrough,
           mimetype: "video/mp4",
           caption: ytmsg,
         },
