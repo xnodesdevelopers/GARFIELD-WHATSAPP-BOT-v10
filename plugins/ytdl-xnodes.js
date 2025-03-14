@@ -3,16 +3,22 @@ const ytdl = require("@distube/ytdl-core");
 const yts = require("yt-search");
 const fs = require("fs");
 const { promisify } = require("util");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegStatic = require("ffmpeg-static");
+const Bottleneck = require("bottleneck");
+const fetch = require("node-fetch");
+
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const readFile = promisify(fs.readFile);
 
-// Set FFmpeg path
-ffmpeg.setFfmpegPath(ffmpegStatic);
-const cookies = [
+// Rate limiter for faster but safe requests (optimized for 2025)
+const limiter = new Bottleneck({
+  minTime: 1500, // Slightly faster: 1 request every 1.5 seconds
+  maxConcurrent: 2, // Allow 2 concurrent requests for better speed
+});
 
+// Enhanced browser-like headers with 2025 compatibility
+// Load cookies from cookies.json
+const cookies =  [ 
 
   {
     domain: ".youtube.com",
@@ -267,37 +273,53 @@ const cookies = [
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
   }
-];
-
-// Create agent with cookies
+]
 const agent = ytdl.createAgent(cookies);
 
-// Custom headers to mimic a browser request, integrated with agent
+// Custom headers to mimic a browser request
 const ytdlOptions = {
-  quality: "highestaudio", // Added for audio optimization
-  requestOptions: {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-    agent: agent, // Using the agent with cookies
+  headers: {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept":
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
   },
+  agent: agent // Using the agent with cookies
+}
+
+// Helper function to fetch cookies (simulate 2025 browser session)
+const getCookies = async (url) => {
+  try {
+    const response = await fetch(url, {
+      headers: ytdlOptions.requestOptions.headers,
+    });
+    const cookies = response.headers.get("set-cookie");
+    return cookies ? { Cookie: cookies.split(";")[0] } : {};
+  } catch (error) {
+    console.error("Error fetching cookies:", error);
+    return {};
+  }
 };
 
-// Custom headers to mimic a browser request
-// Helper function to handle errors
+// Helper function to handle errors with YouTube-specific messages
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e);
-  reply(errorMsg);
+  if (e.message.includes("parsing watch.html") || e.message.includes("blocked") || e.message.includes("CAPTCHA")) {
+    reply(
+      "❌ YouTube has made changes or detected automated access. Please try again later or use a proxy/VPN. Report this issue to the library maintainers at https://github.com/distubejs/ytdl-core/issues. 😢"
+    );
+  } else {
+    reply(errorMsg);
+  }
 };
 
-// Download YouTube audio
+// Download YouTube audio (optimized for speed)
 cmd(
   {
     pattern: "song",
     react: "🎶",
-    desc: "Download YouTube audio by searching for keywords.",
+    desc: "Quickly download YouTube audio by searching for keywords.",
     category: "main",
     use: ".audio <song name or keywords>",
     filename: __filename,
@@ -313,52 +335,80 @@ cmd(
 
       reply("```🔍 Searching for the song... 🎵```");
 
-      // Search for the song using yt-search
-      const searchResults = await yts(searchQuery);
+      // Faster search with yt-search
+      const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}". 😔`);
       }
 
-      const { title, duration, views, author, url: videoUrl, image } =
+      const { title, duration, views, author, url: videoUrl, thumbnail } =
         searchResults.videos[0];
-      const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
+      const ytmsg = `*🎶 Song Name* - ${title}\n*🕜 Duration* - ${duration}\n*📻 Listeners* - ${views}\n*🎙️ Artist* - ${author.name}\n> File Name ${title}.mp3`;
 
-      // Send song details with thumbnail
-      await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
+      // Send song details with thumbnail (faster image loading)
+      await conn.sendMessage(from, { image: { url: thumbnail }, caption: ytmsg });
 
-      // Stream audio directly without saving to a file
-      const audioStream = ytdl(videoUrl, ytdlOptions, { quality: "highestaudio" });
-      const ffmpegStream = ffmpeg(audioStream)
-        .audioBitrate(128)
-        .format("mp3")
-        .on("error", (err) => {
-          console.error("FFmpeg error:", err);
-          reply("❌ An error occurred during audio conversion. 😢");
-        });
+      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
-      // Send the audio file directly
+      // Fetch cookies to avoid bot detection
+      const cookies = await getCookies(videoUrl);
+      const optionsWithCookies = {
+        ...ytdlOptions,
+        requestOptions: {
+          ...ytdlOptions.requestOptions,
+          headers: {
+            ...ytdlOptions.requestOptions.headers,
+            ...cookies,
+          },
+        },
+      };
+
+      // Get video info with optimized options
+      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, optionsWithCookies));
+      const audioFormat = ytdl
+        .filterFormats(info.formats, "audioonly")
+        .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0]; // Pick highest bitrate for speed and quality
+      if (!audioFormat) {
+        return reply("❌ No suitable audio format found. 😢");
+      }
+
+      // Download audio with optimized streaming (faster processing)
+      const audioStream = ytdl.downloadFromInfo(info, {
+        quality: audioFormat.itag,
+        ...optionsWithCookies,
+      });
+      await new Promise((resolve, reject) => {
+        audioStream
+          .pipe(fs.createWriteStream(tempFileName))
+          .on("finish", resolve)
+          .on("error", reject);
+      });
+
+      // Send audio quickly with optimized file handling
       await conn.sendMessage(
         from,
         {
-          audio: ffmpegStream,
+          audio: await readFile(tempFileName),
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
         },
         { quoted: mek }
       );
+
+      // Clean up temporary file
+      await unlink(tempFileName);
     } catch (e) {
-      console.error(e);
-      reply("❌ An error occurred while processing your request. 😢");
+      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
     }
   }
 );
 
-// Download YouTube video
+// Download YouTube video (optimized for speed)
 cmd(
   {
     pattern: "video",
     react: "🎥",
-    desc: "Download YouTube video by searching for keywords.",
+    desc: "Quickly download YouTube video by searching for keywords.",
     category: "main",
     use: ".video <video name or keywords>",
     filename: __filename,
@@ -374,43 +424,67 @@ cmd(
 
       reply("```🔍 Searching for the video... 🎥```");
 
-      // Search for the video using yt-search
-      const searchResults = await yts(searchQuery);
+      // Faster search with yt-search
+      const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}". 😔`);
       }
 
-      const { title, duration, views, author, url: videoUrl, image } =
+      const { title, duration, views, author, url: videoUrl, thumbnail } =
         searchResults.videos[0];
-      const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
+      const ytmsg = `🎬 *Title* - ${title}\n🕜 *Duration* - ${duration}\n👁️ *Views* - ${views}\n👤 *Author* - ${author.name}\n🔗 *Link* - ${videoUrl}`;
 
-      // Get video info
-      const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+      const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
+
+      // Fetch cookies to avoid bot detection
+      const cookies = await getCookies(videoUrl);
+      const optionsWithCookies = {
+        ...ytdlOptions,
+        requestOptions: {
+          ...ytdlOptions.requestOptions,
+          headers: {
+            ...ytdlOptions.requestOptions.headers,
+            ...cookies,
+          },
+        },
+      };
+
+      // Get video info with optimized options
+      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, optionsWithCookies));
       const videoFormat = ytdl
         .filterFormats(info.formats, "videoandaudio")
-        .find((f) => f.qualityLabel === "360p");
+        .sort((a, b) => (b.qualityLabel || "").localeCompare(a.qualityLabel || ""))[0]; // Pick highest quality for speed
       if (!videoFormat) {
         return reply("❌ No suitable video format found. 😢");
       }
 
-      // Stream video directly without saving to a file
+      // Download video with optimized streaming (faster processing)
       const videoStream = ytdl.downloadFromInfo(info, {
         quality: videoFormat.itag,
+        ...optionsWithCookies,
+      });
+      await new Promise((resolve, reject) => {
+        videoStream
+          .pipe(fs.createWriteStream(tempFileName))
+          .on("finish", resolve)
+          .on("error", reject);
       });
 
-      // Send the video file directly
+      // Send video quickly with optimized file handling
       await conn.sendMessage(
         from,
         {
-          video: videoStream,
+          document: await readFile(tempFileName),
           mimetype: "video/mp4",
           caption: ytmsg,
         },
         { quoted: mek }
       );
+
+      // Clean up temporary file
+      await unlink(tempFileName);
     } catch (e) {
-      console.error(e);
-      reply("❌ An error occurred while processing your request. 😢");
+      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
     }
   }
 );
