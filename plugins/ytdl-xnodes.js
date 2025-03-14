@@ -15,7 +15,7 @@ const limiter = new Bottleneck({
 });
 
 // Load cookies from cookies.json
-const cookies =  [
+const cookies =  [ 
 
   {
     domain: ".youtube.com",
@@ -299,84 +299,6 @@ const ensureStoreDirectory = () => {
 };
 
 // Download YouTube audio
-cmd(
-  {
-    pattern: "song",
-    react: "🎶",
-    desc: "Download YouTube audio by searching for keywords.",
-    category: "main",
-    use: ".audio <song name or keywords>",
-    filename: __filename,
-  },
-  async (conn, mek, msg, { from, args, reply }) => {
-    try {
-      const searchQuery = args.join(" ");
-      if (!searchQuery) {
-        return reply(
-          `❗️ Please provide a song name or keywords. 📝\nExample: .audio Despacito`
-        );
-      }
-
-      reply("```🔍 Searching for the song... 🎵```");
-
-      // Search for the song using yt-search with rate limiting
-      const searchResults = await limiter.schedule(() => yts(searchQuery));
-      if (!searchResults.videos.length) {
-        return reply(`❌ No results found for "${searchQuery}". 😔`);
-      }
-
-      const { title, duration, views, author, url: videoUrl, image } =
-        searchResults.videos[0];
-      const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
-
-      // Send song details with thumbnail
-      await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
-
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
-
-      // Get video info with custom headers
-      const info = await limiter.schedule(() =>
-        ytdl.getInfo(videoUrl, ytdlOptions)
-      );
-      const audioFormat = ytdl
-        .filterFormats(info.formats, "audioonly")
-        .find((f) => f.audioBitrate === 128);
-      if (!audioFormat) {
-        return reply("❌ No suitable audio format found. 😢");
-      }
-
-      // Download audio
-      const audioStream = ytdl.downloadFromInfo(info, {
-        quality: audioFormat.itag,
-      });
-      await new Promise((resolve, reject) => {
-        audioStream
-          .pipe(fs.createWriteStream(tempFileName))
-          .on("finish", resolve)
-          .on("error", reject);
-      });
-
-      // Send the audio file
-      await conn.sendMessage(
-        from,
-        {
-          audio: await readFile(tempFileName),
-          mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
-        },
-        { quoted: mek }
-      );
-
-      // Delete the temporary file
-      await unlink(tempFileName);
-    } catch (e) {
-      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
-        e
-      );
-    }
-  }
-);
-
 // Download YouTube video
 cmd(
   {
@@ -449,6 +371,89 @@ cmd(
       handleErrors(reply, "❌ An error occurred while processing your request. 😢")(
         e
       );
+    }
+  }
+);
+
+
+cmd(
+  {
+    pattern: "song",
+    react: "🎶",
+    desc: "Download YouTube audio quickly",
+    category: "main",
+    use: ".song <song name>",
+    filename: __filename,
+  },
+  async (conn, mek, msg, { from, args, reply }) => {
+    try {
+      const searchQuery = args.join(" ");
+      if (!searchQuery) {
+        return reply("❗️ කරුණාකර ගීතයේ නමක් ලබා දෙන්න\nඋදා: .song Despacito");
+      }
+
+      await ensureStoreDirectory();
+      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
+
+      // වේගවත් සෙවුම
+      const searchResults = await limiter.schedule(() => 
+        yts({ query: searchQuery, limit: 1 })
+      );
+      
+      if (!searchResults.videos.length) {
+        return reply(`❌ "${searchQuery}" සඳහා ප්‍රතිඵල හමු නොවීය`);
+      }
+           const { title, duration, views, author, url: videoUrl, image } =
+        searchResults.videos[0];
+      const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
+
+      // Send song details with thumbnail
+      await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
+
+      // වේගවත් ඩවුන්ලෝඩ් එක
+      const audioStream = ytdl(videoUrl, {
+        ...ytdlOptions,
+        filter: "audioonly",
+        quality: "highestaudio",
+        highWaterMark: 1 << 26, // 64MB buffer
+        dlChunkSize: 0, // Disable chunking for faster download
+      });
+
+      // Stream එක ඉක්මනින් ලිවීම
+      await new Promise((resolve, reject) => {
+        const writeStream = audioStream
+          .pipe(fs.createWriteStream(tempFileName, { highWaterMark: 1 << 26 }))
+          .on("finish", resolve)
+          .on("error", reject);
+
+        // 30s timeout
+        const timeout = setTimeout(() => {
+          audioStream.destroy();
+          reject(new Error("Download timeout"));
+        }, 60000);
+
+        writeStream.on("finish", () => clearTimeout(timeout));
+      });
+
+      // ඉක්මනින් යැවීම
+      await conn.sendMessage(
+        from,
+        {
+          audio: { url: tempFileName },
+          mimetype: "audio/mpeg",
+          fileName: `${title}.mp3`,
+          ptt: false
+        },
+        { quoted: mek }
+      );
+
+      // ඉක්මනින් මකාදැමීම
+      await fs.unlink(tempFileName);
+      
+
+    } catch (e) {
+      console.error('Error:', e.message);
+      reply(`❌ දෝෂයක්: ${e.message}\nකරුණාකර නැවත උත්සාහ කරන්න`);
     }
   }
 );
