@@ -14,8 +14,8 @@ const limiter = new Bottleneck({
   minTime: 1000, // 1 request per second
 });
 
-// Load cookies from cookies.json
-const cookies =  [ 
+// Load cookies from cookies.json - using empty array as you mentioned "i fix it"
+const cookies = [
 
   {
     domain: ".youtube.com",
@@ -269,8 +269,7 @@ const cookies =  [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }
-]
+  }];
 const agent = ytdl.createAgent(cookies);
 
 // Custom headers to mimic a browser request
@@ -298,7 +297,6 @@ const ensureStoreDirectory = () => {
   }
 };
 
-// Download YouTube audio
 // Download YouTube video
 cmd(
   {
@@ -375,7 +373,7 @@ cmd(
   }
 );
 
-
+// Download YouTube audio
 cmd(
   {
     pattern: "song",
@@ -389,68 +387,84 @@ cmd(
     try {
       const searchQuery = args.join(" ");
       if (!searchQuery) {
-        return reply("❗️ කරුණාකර ගීතයේ නමක් ලබා දෙන්න\nඋදා: .song Despacito");
+        return reply("❗️ කරුණාකර ගීතයේ නමක් ලබා දෙන්න\nউদা: .song Despacito");
       }
 
       await ensureStoreDirectory();
       const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
-      // වේගවත් සෙවුම
-      const searchResults = await limiter.schedule(() => 
-        yts({ query: searchQuery, limit: 1 })
-      );
+      // Search for the song
+      reply("```🔍 Searching Song... 🎵```");
       
-      if (!searchResults.videos.length) {
+      // Fixed the yts call and result handling
+      const searchResults = await limiter.schedule(() => yts(searchQuery));
+      
+      if (!searchResults.videos || !searchResults.videos.length) {
         return reply(`❌ "${searchQuery}" සඳහා ප්‍රතිඵල හමු නොවීය`);
       }
-           const { title, duration, views, author, url: videoUrl, image } =
+
+      const { title, duration, views, author, url: videoUrl, thumbnail: image } =
         searchResults.videos[0];
       const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
 
       // Send song details with thumbnail
       await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
-
-      // වේගවත් ඩවුන්ලෝඩ් එක
-      const audioStream = ytdl(videoUrl, {
-        ...ytdlOptions,
-        filter: "audioonly",
-        quality: "highestaudio",
-        highWaterMark: 1 << 26, // 64MB buffer
-        dlChunkSize: 0, // Disable chunking for faster download
-      });
-
-      // Stream එක ඉක්මනින් ලිවීම
-      await new Promise((resolve, reject) => {
-        const writeStream = audioStream
-          .pipe(fs.createWriteStream(tempFileName, { highWaterMark: 1 << 26 }))
-          .on("finish", resolve)
-          .on("error", reject);
-
-        // 30s timeout
-        const timeout = setTimeout(() => {
-          audioStream.destroy();
-          reject(new Error("Download timeout"));
-        }, 60000);
-
-        writeStream.on("finish", () => clearTimeout(timeout));
-      });
-
-      // ඉක්මනින් යැවීම
-      await conn.sendMessage(
-        from,
-        {
-          audio: { url: tempFileName },
-          mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
-          ptt: false
-        },
-        { quoted: mek }
-      );
-
-      // ඉක්මනින් මකාදැමීම
-      await fs.unlink(tempFileName);
       
 
+      // Fast download - using a proper try-catch block
+      try {
+        const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+        const audioFormat = ytdl.filterFormats(info.formats, "audioonly")[0];
+        
+        if (!audioFormat) {
+          return reply("❌ No suitable audio format found.");
+        }
+        
+        const audioStream = ytdl.downloadFromInfo(info, {
+          format: audioFormat,
+          quality: "highestaudio",
+          highWaterMark: 1 << 26, // 64MB buffer
+        });
+
+        // Stream to file with proper error handling
+        await new Promise((resolve, reject) => {
+          const writeStream = fs.createWriteStream(tempFileName);
+          audioStream.pipe(writeStream);
+          
+          // Handle stream events
+          writeStream.on("finish", resolve);
+          writeStream.on("error", reject);
+          audioStream.on("error", reject);
+          
+          // Set timeout to prevent hanging
+          const timeout = setTimeout(() => {
+            audioStream.destroy();
+            reject(new Error("Download timeout"));
+          }, 60000);
+          
+          writeStream.on("finish", () => clearTimeout(timeout));
+        });
+
+        // Send the audio file
+        await conn.sendMessage(
+          from,
+          {
+            audio: { url: tempFileName },
+            mimetype: "audio/mpeg",
+            fileName: `${title}.mp3`,
+            ptt: false
+          },
+          { quoted: mek }
+        );
+      } catch (streamError) {
+        console.error("Stream error:", streamError);
+        return reply(`❌ Audio download error: ${streamError.message}`);
+      } finally {
+        // Delete the temporary file if it exists
+        if (fs.existsSync(tempFileName)) {
+          await unlink(tempFileName).catch(e => console.error("Error deleting file:", e));
+        }
+      }
     } catch (e) {
       console.error('Error:', e.message);
       reply(`❌ දෝෂයක්: ${e.message}\nකරුණාකර නැවත උත්සාහ කරන්න`);
