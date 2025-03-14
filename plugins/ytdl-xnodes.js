@@ -327,33 +327,28 @@ cmd(
 
       const { title, duration, views, author, url: videoUrl, image } =
         searchResults.videos[0];
-      const ytmsg = `*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3\n    `;
+      const ytmsg = `\n*🎶 Song Name*: ${title}\n🕜 *Duration*: ${duration}\n📻 *Listeners*: ${views}\n🎙️ *Artist*: ${author.name}\n\n> 𝖦Λ𝖱𝖥𝖨Ξ𝖫𝖣 𝖡𝖮Т v10.1\n> File Name: ${title}.mp3`;
 
       // Send song details with thumbnail
       await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
 
-      ensureStoreDirectory();
       const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
-      // Get video info with cookies via agent
+      // Get video info with custom headers
       const info = await limiter.schedule(() =>
         ytdl.getInfo(videoUrl, ytdlOptions)
       );
-      
       const audioFormat = ytdl
         .filterFormats(info.formats, "audioonly")
-        .find((f) => f.audioBitrate === 128 || f.audioBitrate) || info.formats.find(f => f.hasAudio && !f.hasVideo);
-        
+        .find((f) => f.audioBitrate === 128);
       if (!audioFormat) {
         return reply("❌ No suitable audio format found. 😢");
       }
 
-      // Download audio with the same options (including agent with cookies)
+      // Download audio
       const audioStream = ytdl.downloadFromInfo(info, {
-        ...ytdlOptions,
         quality: audioFormat.itag,
       });
-      
       await new Promise((resolve, reject) => {
         audioStream
           .pipe(fs.createWriteStream(tempFileName))
@@ -411,35 +406,25 @@ cmd(
 
       const { title, duration, views, author, url: videoUrl, image } =
         searchResults.videos[0];
-      const ytmsg = `🎬 *Title* - ${title}\n🕜 *Duration* - ${duration}\n👁️ *Views* - ${views}\n👤 *Author* - ${author.name}\n🔗 *Link* - ${videoUrl}`;
+      const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
 
-      ensureStoreDirectory();
       const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
 
-      // Get video info with cookies via agent
+      // Get video info with custom headers
       const info = await limiter.schedule(() =>
         ytdl.getInfo(videoUrl, ytdlOptions)
       );
-      
-      // Try to find a 360p format, fallback to any video+audio format
-      let videoFormat = ytdl
+      const videoFormat = ytdl
         .filterFormats(info.formats, "videoandaudio")
         .find((f) => f.qualityLabel === "360p");
-      
-      if (!videoFormat) {
-        videoFormat = ytdl.filterFormats(info.formats, "videoandaudio")[0];
-      }
-      
       if (!videoFormat) {
         return reply("❌ No suitable video format found. 😢");
       }
 
-      // Download video with the same options (including agent with cookies)
+      // Download video
       const videoStream = ytdl.downloadFromInfo(info, {
-        ...ytdlOptions,
         quality: videoFormat.itag,
       });
-      
       await new Promise((resolve, reject) => {
         videoStream
           .pipe(fs.createWriteStream(tempFileName))
