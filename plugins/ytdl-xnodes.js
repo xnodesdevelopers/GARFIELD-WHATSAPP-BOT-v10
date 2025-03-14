@@ -17,7 +17,7 @@ const limiter = new Bottleneck({
 
 // Enhanced browser-like headers with compatibility
 const cookies = [
-  
+
 
   {
     domain: ".youtube.com",
@@ -271,7 +271,7 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-    }
+  }
 ]; // Add your cookies here if needed
 const agent = ytdl.createAgent(cookies);
 const ytdlOptions = {
@@ -345,10 +345,11 @@ cmd(
           .on("error", reject);
       });
 
+      const audioBuffer = await readFile(tempFileName);
       await conn.sendMessage(
         from,
         {
-          audio: await readFile(tempFileName),
+          audio: audioBuffer,
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
         },
@@ -411,10 +412,11 @@ cmd(
           .on("error", reject);
       });
 
+      const videoBuffer = await readFile(tempFileName);
       await conn.sendMessage(
         from,
         {
-          document: await readFile(tempFileName),
+          document: videoBuffer,
           mimetype: "video/mp4",
           caption: `🎬 *Title*: ${title}`,
         },
