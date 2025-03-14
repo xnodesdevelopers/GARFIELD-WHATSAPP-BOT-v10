@@ -4,6 +4,11 @@ const yts = require("yt-search");
 const fs = require("fs");
 const { promisify } = require("util");
 const Bottleneck = require("bottleneck");
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
+
+// Ensure FFmpeg is available
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
@@ -296,72 +301,7 @@ if (!fs.existsSync("./store")) {
   fs.mkdirSync("./store");
 }
 
-// Command to download YouTube audio
-cmd(
-  {
-    pattern: "song",
-    react: "🎶",
-    desc: "Download YouTube audio by searching keywords.",
-    category: "main",
-    use: ".song <keywords>",
-    filename: __filename,
-  },
-  async (conn, mek, msg, { from, args, reply }) => {
-    try {
-      const searchQuery = args.join(" ");
-      if (!searchQuery) {
-        return reply("❗️ Provide song name or keywords.\nExample: .song Despacito");
-      }
-
-      reply("🔍 Searching for the song...");
-
-      const searchResults = await limiter.schedule(() => yts(searchQuery));
-      if (!searchResults.videos.length) {
-        return reply(`❌ No results found for "${searchQuery}".`);
-      }
-
-      const { title, url: videoUrl, thumbnail } = searchResults.videos[0];
-      reply(`🎶 Downloading *${title}*...`);
-
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
-      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
-      const audioFormat = ytdl
-        .filterFormats(info.formats, "audioonly")
-        .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
-
-      if (!audioFormat) {
-        return reply("❌ No suitable audio format found.");
-      }
-
-      const audioStream = ytdl.downloadFromInfo(info, {
-        quality: audioFormat.itag,
-        ...ytdlOptions,
-      });
-
-      await new Promise((resolve, reject) => {
-        audioStream
-          .pipe(fs.createWriteStream(tempFileName))
-          .on("finish", resolve)
-          .on("error", reject);
-      });
-
-      const audioBuffer = await readFile(tempFileName);
-      await conn.sendMessage(
-        from,
-        {
-          audio: audioBuffer,
-          mimetype: "audio/mpeg",
-          fileName: `${title}.mp3`,
-        },
-        { quoted: mek }
-      );
-
-      await unlink(tempFileName); // Clean up the temporary file
-    } catch (error) {
-      handleErrors(reply, "❌ An error occurred while processing your request.")(error);
-    }
-  }
-);
+/
 
 // Command to download YouTube video
 cmd(
@@ -426,6 +366,75 @@ cmd(
       await unlink(tempFileName); // Clean up the temporary file
     } catch (error) {
       handleErrors(reply, "❌ An error occurred while processing your request.")(error);
+    }
+  }
+);
+
+
+
+
+// Command to download YouTube audio
+cmd(
+  {
+    pattern: "song",
+    react: "🎶",
+    desc: "Download YouTube audio by searching keywords.",
+    category: "main",
+    use: ".song <keywords>",
+    filename: __filename,
+  },
+  async (conn, mek, msg, { from, args, reply }) => {
+    try {
+      const searchQuery = args.join(" ");
+      if (!searchQuery) {
+        return reply("❗️ Provide song name or keywords.\nExample: .song Despacito");
+      }
+
+      reply("🔍 Searching for the song...");
+
+      const searchResults = await limiter.schedule(() => yts(searchQuery));
+      if (!searchResults.videos.length) {
+        return reply(`❌ No results found for "${searchQuery}".`);
+      }
+
+      const { title, url: videoUrl } = searchResults.videos[0];
+      reply(`🎶 Downloading *${title}*...`);
+
+      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
+      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
+      const audioFormat = ytdl
+        .filterFormats(info.formats, "audioonly")
+        .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+
+      if (!audioFormat) {
+        return reply("❌ No suitable audio format found.");
+      }
+
+      // Use FFmpeg to directly extract audio
+      await new Promise((resolve, reject) => {
+        ffmpeg(ytdl.downloadFromInfo(info, { quality: audioFormat.itag }))
+          .audioBitrate(128) // Set audio bitrate
+          .format("mp3") // Convert to MP3
+          .on("end", resolve)
+          .on("error", reject)
+          .save(tempFileName);
+      });
+
+      const audioBuffer = await readFile(tempFileName);
+      await conn.sendMessage(
+        from,
+        {
+          audio: audioBuffer,
+          mimetype: "audio/mpeg",
+          fileName: `${title}.mp3`,
+        },
+        { quoted: mek }
+      );
+
+      await unlink(tempFileName); // Clean up the temporary file
+    } catch (error) {
+      console.error(error);
+      reply("❌ An error occurred while processing your request.");
     }
   }
 );
