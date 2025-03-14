@@ -8,16 +8,12 @@ const ffmpegStatic = require("ffmpeg-static");
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const readFile = promisify(fs.readFile);
-const stream = require("stream");
-const pipeline = promisify(stream.pipeline);
-
 
 // Set FFmpeg path
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
-
 // Load cookies from cookies.json
-const cookies =  [
+const cookies = [
 
   {
     domain: ".youtube.com",
@@ -271,8 +267,7 @@ const cookies =  [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  } 
-]
+  }];
 const agent = ytdl.createAgent(cookies);
 
 // Custom headers to mimic a browser request
@@ -284,7 +279,7 @@ const ytdlOptions = {
       "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
   },
-  agent: agent // Using the agent with cookies
+  agent: agent, // Using the agent with cookies
 };
 
 // Helper function to handle errors
@@ -293,10 +288,7 @@ const handleErrors = (reply, errorMsg) => (e) => {
   reply(errorMsg);
 };
 
-// Helper function to ensure store directory exist
-
 // Download YouTube audio
-
 cmd(
   {
     pattern: "song",
@@ -340,15 +332,11 @@ cmd(
           reply("❌ An error occurred during audio conversion. 😢");
         });
 
-      // Create a PassThrough stream to pipe the output
-      const passThrough = new stream.PassThrough();
-      ffmpegStream.pipe(passThrough);
-
       // Send the audio file directly
       await conn.sendMessage(
         from,
         {
-          audio: passThrough,
+          audio: ffmpegStream,
           mimetype: "audio/mpeg",
           fileName: `${title}.mp3`,
         },
@@ -361,6 +349,7 @@ cmd(
   }
 );
 
+// Download YouTube video
 cmd(
   {
     pattern: "video",
@@ -405,15 +394,11 @@ cmd(
         quality: videoFormat.itag,
       });
 
-      // Create a PassThrough stream to pipe the output
-      const passThrough = new stream.PassThrough();
-      videoStream.pipe(passThrough);
-
       // Send the video file directly
       await conn.sendMessage(
         from,
         {
-          video: passThrough,
+          video: videoStream,
           mimetype: "video/mp4",
           caption: ytmsg,
         },
