@@ -3,7 +3,7 @@ const yts = require('yt-search'); // YouTube video search
 const fetch = require('node-fetch'); // API requests
 
 cmd({
-    pattern: "video",
+    pattern: "yt",
     react: "⬇️",
     desc: "Download YouTube video using keywords.",
     category: "main",
