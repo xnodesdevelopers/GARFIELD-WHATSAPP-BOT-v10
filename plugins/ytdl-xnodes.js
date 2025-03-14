@@ -289,30 +289,6 @@ const ytdlOptions = {
 }
 
 // Helper function to fetch cookies (simulate 2025 browser session)
-const getCookies = async (url) => {
-  try {
-    const response = await fetch(url, {
-      headers: ytdlOptions.requestOptions.headers,
-    });
-    const cookies = response.headers.get("set-cookie");
-    return cookies ? { Cookie: cookies.split(";")[0] } : {};
-  } catch (error) {
-    console.error("Error fetching cookies:", error);
-    return {};
-  }
-};
-
-// Helper function to handle errors with YouTube-specific messages
-const handleErrors = (reply, errorMsg) => (e) => {
-  console.error(e);
-  if (e.message.includes("parsing watch.html") || e.message.includes("blocked") || e.message.includes("CAPTCHA")) {
-    reply(
-      "❌ YouTube has made changes or detected automated access. Please try again later or use a proxy/VPN. Report this issue to the library maintainers at https://github.com/distubejs/ytdl-core/issues. 😢"
-    );
-  } else {
-    reply(errorMsg);
-  }
-};
 
 // Download YouTube audio (optimized for speed)
 cmd(
@@ -351,20 +327,8 @@ cmd(
       const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
       // Fetch cookies to avoid bot detection
-      const cookies = await getCookies(videoUrl);
-      const optionsWithCookies = {
-        ...ytdlOptions,
-        requestOptions: {
-          ...ytdlOptions.requestOptions,
-          headers: {
-            ...ytdlOptions.requestOptions.headers,
-            ...cookies,
-          },
-        },
-      };
-
       // Get video info with optimized options
-      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, optionsWithCookies));
+      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
       const audioFormat = ytdl
         .filterFormats(info.formats, "audioonly")
         .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0]; // Pick highest bitrate for speed and quality
@@ -437,20 +401,9 @@ cmd(
       const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
 
       // Fetch cookies to avoid bot detection
-      const cookies = await getCookies(videoUrl);
-      const optionsWithCookies = {
-        ...ytdlOptions,
-        requestOptions: {
-          ...ytdlOptions.requestOptions,
-          headers: {
-            ...ytdlOptions.requestOptions.headers,
-            ...cookies,
-          },
-        },
-      };
 
       // Get video info with optimized options
-      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, optionsWithCookies));
+      const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
       const videoFormat = ytdl
         .filterFormats(info.formats, "videoandaudio")
         .sort((a, b) => (b.qualityLabel || "").localeCompare(a.qualityLabel || ""))[0]; // Pick highest quality for speed
