@@ -1,4 +1,3 @@
-audio is not working , fix it and fast working yt audio 
 const { cmd } = require("../command");
 const ytdl = require("@distube/ytdl-core");
 const yts = require("yt-search");
