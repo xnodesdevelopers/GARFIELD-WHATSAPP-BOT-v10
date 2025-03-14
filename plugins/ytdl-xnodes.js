@@ -11,9 +11,8 @@ const readFile = promisify(fs.readFile);
 
 // Set FFmpeg path
 ffmpeg.setFfmpegPath(ffmpegStatic);
-
-// Custom headers to mimic a browser request
 const cookies = [
+
 
   {
     domain: ".youtube.com",
@@ -267,20 +266,26 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }];
+  }
+];
+
+// Create agent with cookies
 const agent = ytdl.createAgent(cookies);
 
-// Custom headers to mimic a browser request
+// Custom headers to mimic a browser request, integrated with agent
 const ytdlOptions = {
-  headers: {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Accept":
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
+  quality: "highestaudio", // Added for audio optimization
+  requestOptions: {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+    agent: agent, // Using the agent with cookies
   },
-  agent: agent, // Using the agent with cookies
 };
+
+// Custom headers to mimic a browser request
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e);
