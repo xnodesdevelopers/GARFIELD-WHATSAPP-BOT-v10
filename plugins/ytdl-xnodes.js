@@ -18,7 +18,8 @@ const limiter = new Bottleneck({
 
 // Enhanced browser-like headers with 2025 compatibility
 // Load cookies from cookies.json
-const cookies =  [ 
+const cookies =  [
+
 
   {
     domain: ".youtube.com",
@@ -288,7 +289,16 @@ const ytdlOptions = {
   agent: agent // Using the agent with cookies
 }
 
-// Helper function to fetch cookies (simulate 2025 browser session)
+// Helper function to handle errors
+const handleErrors = (reply, errorMessage) => (error) => {
+  console.error(error);
+  reply(errorMessage);
+};
+
+// Ensure the store directory exists
+if (!fs.existsSync("./store")) {
+  fs.mkdirSync("./store");
+}
 
 // Download YouTube audio (optimized for speed)
 cmd(
@@ -326,7 +336,6 @@ cmd(
 
       const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
 
-      // Fetch cookies to avoid bot detection
       // Get video info with optimized options
       const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
       const audioFormat = ytdl
@@ -339,7 +348,7 @@ cmd(
       // Download audio with optimized streaming (faster processing)
       const audioStream = ytdl.downloadFromInfo(info, {
         quality: audioFormat.itag,
-        ...optionsWithCookies,
+        ...ytdlOptions,
       });
       await new Promise((resolve, reject) => {
         audioStream
@@ -400,8 +409,6 @@ cmd(
 
       const tempFileName = `./store/yt_video_${Date.now()}.mp4`;
 
-      // Fetch cookies to avoid bot detection
-
       // Get video info with optimized options
       const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
       const videoFormat = ytdl
@@ -414,7 +421,7 @@ cmd(
       // Download video with optimized streaming (faster processing)
       const videoStream = ytdl.downloadFromInfo(info, {
         quality: videoFormat.itag,
-        ...optionsWithCookies,
+        ...ytdlOptions,
       });
       await new Promise((resolve, reject) => {
         videoStream
