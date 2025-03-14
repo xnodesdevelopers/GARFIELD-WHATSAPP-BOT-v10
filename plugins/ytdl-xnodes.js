@@ -331,7 +331,7 @@ cmd(
       await conn.sendMessage(from, { image: { url: image }, caption: ytmsg });
 
       // Stream audio directly without saving to a file
-      const audioStream = ytdl(videoUrl, { quality: "highestaudio" });
+      const audioStream = ytdl(videoUrl, ytdlOptions { quality: "highestaudio" });
       const ffmpegStream = ffmpeg(audioStream)
         .audioBitrate(128)
         .format("mp3")
@@ -392,7 +392,7 @@ cmd(
       const ytmsg = `🎬 *Title:* ${title}\n🕜 *Duration:* ${duration}\n👁️ *Views:* ${views}\n👤 *Author:* ${author.name}\n🔗 *Link:* ${videoUrl}`;
 
       // Get video info
-      const info = await ytdl.getInfo(videoUrl);
+      const info = await ytdl.getInfo(videoUrl, ytdlOptions);
       const videoFormat = ytdl
         .filterFormats(info.formats, "videoandaudio")
         .find((f) => f.qualityLabel === "360p");
