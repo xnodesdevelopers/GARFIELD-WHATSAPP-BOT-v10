@@ -4,10 +4,12 @@ const yts = require("yt-search");
 const fs = require("fs");
 const { promisify } = require("util");
 const Bottleneck = require("bottleneck");
-
+const ffmpeg = require("fluent-ffmpeg");
+const ffmpegPath = require("ffmpeg-static");
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
 const readFile = promisify(fs.readFile);
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Rate limiter for faster but safe requests
 const limiter = new Bottleneck({
@@ -270,9 +272,8 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }
-
-]; // Add your cookies here if needed
+  }]
+ // I fill it  ]; // Add your cookies here if needed
 const agent = ytdl.createAgent(cookies);
 const ytdlOptions = {
   headers: {
@@ -315,11 +316,13 @@ cmd(
 
       reply("```🔍 Searching for the song...```");
 
+      // Search for the song using yt-search
       const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
- // Extract video details
+
+      // Extract video details
       const { title, duration, views, author, url: videoUrl, thumbnail } =
         searchResults.videos[0];
       const ytmsg = `*🎶 Song Name* - ${title}\n*🕜 Duration* - ${duration}\n*📻 Listeners* - ${views}\n*🎙️ Artist* - ${author.name}\n> File Name ${title}.mp3`;
@@ -327,8 +330,11 @@ cmd(
       // Send song details with thumbnail
       await conn.sendMessage(from, { image: { url: thumbnail }, caption: ytmsg });
 
-      const tempFileName = `./store/yt_audio_${Date.now()}.mp3`;
+      // Get video info using ytdl-core
       const info = await limiter.schedule(() => ytdl.getInfo(videoUrl, ytdlOptions));
+
+      // Log available formats for debugging
+
       // Filter audio-only formats and select the best quality (itag=140 for MP4 audio)
       const audioFormat = ytdl
         .filterFormats(info.formats, "audioonly")
@@ -338,6 +344,11 @@ cmd(
         return reply("❌ No suitable audio format found.");
       }
 
+      // Temporary file paths
+      const tempFileName = `./store/yt_audio_${Date.now()}.mp4`;
+      const outputFileName = `./store/yt_audio_${Date.now()}.mp3`;
+
+      // Download the audio stream
       const audioStream = ytdl.downloadFromInfo(info, {
         quality: audioFormat.itag,
         ...ytdlOptions,
@@ -350,7 +361,26 @@ cmd(
           .on("error", reject);
       });
 
-      const audioBuffer = await readFile(tempFileName);
+      // Convert the downloaded MP4 audio to MP3 using FFmpeg
+      await new Promise((resolve, reject) => {
+        ffmpeg(tempFileName)
+          .audioBitrate(128) // Set audio bitrate to 128 kbps
+          .format("mp3") // Convert to MP3
+          .on("end", () => {
+            console.log("Audio conversion complete!");
+            resolve();
+          })
+          .on("error", (err) => {
+            console.error("FFmpeg Error:", err);
+            reject(err);
+          })
+          .save(outputFileName);
+      });
+
+      // Read the converted MP3 file
+      const audioBuffer = await readFile(outputFileName);
+
+      // Send the audio file
       await conn.sendMessage(
         from,
         {
@@ -361,13 +391,15 @@ cmd(
         { quoted: mek }
       );
 
-      await unlink(tempFileName); // Clean up the temporary file
+      // Clean up temporary files
+      await unlink(tempFileName);
+      await unlink(outputFileName);
     } catch (error) {
-      handleErrors(reply, "❌ An error occurred while processing your request.")(error);
+      console.error("Error in song command:", error);
+      reply("❌ An error occurred while processing your request.");
     }
   }
 );
-
 // Command to download YouTube video
 cmd(
   {
@@ -385,13 +417,12 @@ cmd(
         return reply("❗️ Provide video name or keywords.\nExample: .video Despacito");
       }
 
-      reply("```🔍 Searching for the video..```.");
+      reply("```🔍 Searching for the video...```");
 
       const searchResults = await limiter.schedule(() => yts(searchQuery));
       if (!searchResults.videos.length) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
-
 
       const { title, duration, views, author, url: videoUrl, thumbnail } =
         searchResults.videos[0];
@@ -419,13 +450,12 @@ cmd(
           .on("error", reject);
       });
 
-      const videoBuffer = await readFile(tempFileName);
       await conn.sendMessage(
         from,
         {
-          videot: videoBuffer,
+          video: await readFile(tempFileName),
           mimetype: "video/mp4",
-          caption: ytmsg
+          caption: ytmsg,
         },
         { quoted: mek }
       );
