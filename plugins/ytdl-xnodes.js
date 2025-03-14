@@ -14,10 +14,6 @@ const readFile = promisify(fs.readFile);
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
 // Rate limiter to avoid too many requests
-const limiter = new Bottleneck({
-  minTime: 1000, // 1 request per second
-});
-
 // Load cookies from cookies.json
 const cookies =  [
 
