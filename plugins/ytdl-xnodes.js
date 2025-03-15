@@ -1,7 +1,8 @@
 const { cmd } = require("../command");
 const ytdl = require("@distube/ytdl-core"); // Using the latest ytdl-core directly (2025)
 const { search } = require("play-dl"); // Using play-dl for faster searches
-const fs = require("fs/promises"); // Using promise-based fs
+const fs = require("fs"); // Regular fs module for createWriteStream
+const fsp = require("fs/promises"); // Promise-based fs module for other operations
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
@@ -274,8 +275,7 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }
-  // Add your cookies here if needed
+    }
 ];
 
 const agent = ytdl.createAgent(cookies);
@@ -319,22 +319,24 @@ const videoOptions = {
 const ensureStoreDir = async () => {
   const storeDir = "./store";
   try {
-    await fs.access(storeDir);
+    await fsp.access(storeDir);
   } catch {
-    await fs.mkdir(storeDir, { recursive: true });
+    await fsp.mkdir(storeDir, { recursive: true });
   }
   return storeDir;
 };
 
 // Helper to clean temp files
 const cleanupFiles = async (files) => {
-  for (const file of files) {
-    try {
-      await fs.unlink(file);
-    } catch (err) {
-      console.error(`Failed to delete ${file}:`, err);
-    }
-  }
+  await Promise.all(
+    files.map(async (file) => {
+      try {
+        await fsp.unlink(file);
+      } catch (err) {
+        console.error(`Failed to delete ${file}:`, err);
+      }
+    })
+  );
 };
 
 // Audio conversion with optimized settings
@@ -417,7 +419,6 @@ cmd(
         return reply("❗️ Provide song name or keywords.\nExample: .song Despacito");
       }
 
-      await reply("```🔍 Searching for the song...```");
 
       const video = await searchVideo(searchQuery);
 
@@ -448,14 +449,14 @@ cmd(
       const audioStream = ytdl(videoUrl, ytdlOptions);
 
       // Write to file with stream/promises
-      const writeStream = fs.createWriteStream(tempFileName);
+      const writeStream = fs.createWriteStream(tempFileName); // Use regular fs module
       await pipeline(audioStream, writeStream);
 
       // Convert audio with optimized settings
       await convertAudio(tempFileName, outputFileName);
 
       // Read the converted file
-      const audioBuffer = await fs.readFile(outputFileName);
+      const audioBuffer = await fsp.readFile(outputFileName);
 
       // Send the audio file
       await conn.sendMessage(
@@ -538,7 +539,7 @@ cmd(
       await pipeline(videoStream, writeStream);
 
       // Read the video file
-      const videoBuffer = await fs.readFile(videoFileName);
+      const videoBuffer = await fsp.readFile(videoFileName);
 
       // Send the video file
       await conn.sendMessage(
