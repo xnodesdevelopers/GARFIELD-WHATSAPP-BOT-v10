@@ -15,12 +15,12 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 const memoryCache = cacheManager.caching({
   store: "memory",
   ttl: 3600, // Cache for 1 hour
-  max: 100 // Maximum number of items in cache
+  max: 100, // Maximum number of items in cache
 });
 
 // Cookie configuration as requested
 const cookies = [
-  
+
 
   {
     domain: ".youtube.com",
@@ -274,9 +274,9 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-    }
- 
-]; // Add your cookies here if needed
+  }
+  // Add your cookies here if needed
+];
 
 const agent = ytdl.createAgent(cookies);
 
@@ -287,25 +287,30 @@ const ytdlOptions = {
   highWaterMark: 1 << 25, // 32MB buffer for faster downloads
   requestOptions: {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
-    }
+    },
   },
   agent: agent, // Using the agent with cookies
 };
 
 // Video download options for 360p with cookie agent
 const videoOptions = {
-  quality: 'medium', // This targets 360p quality
-  filter: format => format.qualityLabel === '360p' && format.container === 'mp4',
+  quality: "medium", // This targets 360p quality
+  filter: (format) =>
+    format.qualityLabel === "360p" && format.container === "mp4",
   highWaterMark: 1 << 25, // 32MB buffer for faster downloads
   requestOptions: {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
-    }
+    },
   },
   agent: agent, // Using the agent with cookies
 };
@@ -350,28 +355,27 @@ const convertAudio = async (input, output) => {
 // Function to get video info with proper format selection
 const getVideoInfo = async (videoUrl) => {
   const info = await ytdl.getInfo(videoUrl, { agent: agent }); // Using agent with cookies
-  
+
   // Get available formats
   const formats = info.formats;
-  
+
   // Find the best 360p mp4 format
-  const format360p = formats.find(format => 
-    format.qualityLabel === '360p' && 
-    format.container === 'mp4' && 
-    format.hasVideo && 
-    format.hasAudio
+  const format360p = formats.find(
+    (format) =>
+      format.qualityLabel === "360p" &&
+      format.container === "mp4" &&
+      format.hasVideo &&
+      format.hasAudio
   );
-  
+
   // Fall back to another format if 360p isn't available
-  const fallbackFormat = formats.find(format => 
-    format.hasVideo && 
-    format.hasAudio && 
-    format.container === 'mp4'
+  const fallbackFormat = formats.find(
+    (format) => format.hasVideo && format.hasAudio && format.container === "mp4"
   );
-  
+
   return {
     info,
-    videoFormat: format360p || fallbackFormat
+    videoFormat: format360p || fallbackFormat,
   };
 };
 
@@ -416,23 +420,21 @@ cmd(
       await reply("```🔍 Searching for the song...```");
 
       const video = await searchVideo(searchQuery);
-      
+
       if (!video) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
 
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
-      
+
       // Format details message
-      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || 'N/A'}\n*🎙️ Artist* - ${video.channel?.name || 'Unknown'}\n> File Name ${video.title}.mp3`;
+      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.mp3`;
 
       // Send song details with thumbnail
-      await conn.sendMessage(from, { 
-        image: { url: video.thumbnails[0].url }, 
-        caption: ytmsg 
+      await conn.sendMessage(from, {
+        image: { url: video.thumbnails[0].url },
+        caption: ytmsg,
       });
-
-      // Send processing message
 
       // Ensure store directory exists
       const storeDir = await ensureStoreDir();
@@ -444,9 +446,10 @@ cmd(
 
       // Use ytdl to stream the audio with optimized settings and cookie agent
       const audioStream = ytdl(videoUrl, ytdlOptions);
-      
+
       // Write to file with stream/promises
-      await pipeline(audioStream, fs.createWriteStream(tempFileName));
+      const writeStream = fs.createWriteStream(tempFileName);
+      await pipeline(audioStream, writeStream);
 
       // Convert audio with optimized settings
       await convertAudio(tempFileName, outputFileName);
@@ -467,7 +470,6 @@ cmd(
 
       // Clean up temporary files
       await cleanupFiles([tempFileName, outputFileName]);
-
     } catch (error) {
       console.error("Error in song command:", error);
       reply("❌ An error occurred while processing your request. Please try again later.");
@@ -495,7 +497,7 @@ cmd(
       await reply("```🔍 Searching for the video...```");
 
       const video = await searchVideo(searchQuery);
-      
+
       if (!video) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
@@ -503,19 +505,20 @@ cmd(
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
 
       // Format details message
-      const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || 'N/A'}\n*👤 Author* - ${video.channel?.name || 'Unknown'}\n`;
+      const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
 
       // Send video details with thumbnail
-    
-
-      // Send processing message
+      await conn.sendMessage(from, {
+        image: { url: video.thumbnails[0].url },
+        caption: ytmsg,
+      });
 
       // Ensure store directory exists
       const storeDir = await ensureStoreDir();
 
       // Get video info with format selection (using cookie agent)
       const { videoFormat } = await getVideoInfo(videoUrl);
-      
+
       if (!videoFormat) {
         return reply("❌ Couldn't find a suitable 360p video format. Try another video.");
       }
@@ -525,18 +528,17 @@ cmd(
       const videoFileName = path.join(storeDir, `yt_video_${timestamp}.mp4`);
 
       // Use ytdl to stream the video with selected format and cookie agent
-      const videoStream = ytdl(videoUrl, { 
+      const videoStream = ytdl(videoUrl, {
         format: videoFormat,
-        agent: agent // Using the agent with cookies
+        agent: agent, // Using the agent with cookies
       });
-      
+
       // Write to file with stream/promises for better performance
-      await pipeline(videoStream, fs.createWriteStream(videoFileName));
+      const writeStream = fs.createWriteStream(videoFileName);
+      await pipeline(videoStream, writeStream);
 
       // Read the video file
       const videoBuffer = await fs.readFile(videoFileName);
-
-      // Send processing complete message
 
       // Send the video file
       await conn.sendMessage(
@@ -552,7 +554,6 @@ cmd(
 
       // Clean up temporary files
       await cleanupFiles([videoFileName]);
-
     } catch (error) {
       console.error("Error in video command:", error);
       reply("❌ An error occurred while processing your request. Please try again later.");
