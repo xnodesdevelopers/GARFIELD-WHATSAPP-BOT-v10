@@ -8,7 +8,7 @@ ffmpeg.setFfmpegPath(ffmpegPath); // Set FFmpeg path
 
 // Load cookies from environment variables (if needed)
 const cookies = [
-
+  
 
   {
     domain: ".youtube.com",
@@ -262,7 +262,8 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }
+      }
+
 ];
 
 // Create a custom agent with cookies
@@ -306,9 +307,9 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
 
     // Get video info
     const info = await ytdl.getInfo(videoUrl, ytdlOptions);
-
-    // Find the itag 140 format (audio-only, typically M4A)
-    const audioFormat = info.formats.find((f) => f.itag === 140);
+    const audioFormat = ytdl
+        .filterFormats(info.formats, "videoandaudio")
+        .find((f) => f.qualityLabel === "360p");
 
     if (!audioFormat) {
       return reply("❌ No itag 140 format found. 😢");
