@@ -2,8 +2,15 @@ const { cmd } = require("../command"); // Assuming you have a command handler
 const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
 const fs = require("fs"); // For file system operations
+const path = require("path"); // For path operations
 
-// Load cookies from environment variables (if needed)
+// Ensure the ./store directory exists
+const storeDir = "./store";
+if (!fs.existsSync(storeDir)) {
+  fs.mkdirSync(storeDir);
+}
+
+// Custom headers and options for ytdl
 const cookies = [
 
 
@@ -260,7 +267,6 @@ const cookies = [
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
   }
-  // Add your cookies here if required
 ];
 
 // Create a custom agent with cookies
@@ -277,6 +283,7 @@ const ytdlOptions = {
   },
   agent: agent, // Use the custom agent with cookies
 };
+
 
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
@@ -295,11 +302,11 @@ const searchVideo = async (query) => {
   }
 };
 
-// Function to download itag 140 (AAC audio) directly
+// Function to download audio
 const downloadAudio = async (videoUrl, title, reply, conn, from, mek) => {
   try {
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-    const tempAudioFile = `./store/${sanitizedTitle}.m4a`; // Temporary M4A file (AAC format)
+    const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary M4A file (AAC format)
 
     // Get video info
     const info = await ytdl.getInfo(videoUrl, ytdlOptions);
@@ -329,7 +336,7 @@ const downloadAudio = async (videoUrl, title, reply, conn, from, mek) => {
       from,
       {
         audio: fs.readFileSync(tempAudioFile), // Read the M4A file
-        mimetype: "audio/mp4", // Set MIME type for AAC audio
+        mimetype: "audio/m4a", // Set MIME type for AAC audio
         fileName: `${title}.m4a`, // Use the title as the file name
       },
       { quoted: mek }
@@ -385,8 +392,7 @@ cmd(
   }
 );
 
-
-
+// Command to download video
 cmd(
   {
     pattern: "video",
@@ -420,7 +426,7 @@ cmd(
       const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
 
       const sanitizedTitle = video.title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-      const tempFileName = `./store/yt_video_${sanitizedTitle}.mp4`;
+      const tempFileName = path.join(storeDir, `yt_video_${sanitizedTitle}.mp4`);
 
       // Get video info with custom options
       const info = await ytdl.getInfo(videoUrl, ytdlOptions);
