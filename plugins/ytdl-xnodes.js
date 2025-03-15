@@ -2,13 +2,10 @@ const { cmd } = require("../command"); // Assuming you have a command handler
 const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
 const fs = require("fs"); // For file system operations
-const ffmpeg = require("fluent-ffmpeg"); // For converting video to audio
-const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path; // FFmpeg path
-ffmpeg.setFfmpegPath(ffmpegPath); // Set FFmpeg path
 
 // Load cookies from environment variables (if needed)
 const cookies = [
-  
+
 
   {
     domain: ".youtube.com",
@@ -262,8 +259,8 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-      }
-
+  }
+  // Add your cookies here if required
 ];
 
 // Create a custom agent with cookies
@@ -298,60 +295,48 @@ const searchVideo = async (query) => {
   }
 };
 
-// Function to download itag 140 and convert to MP3
-const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) => {
+// Function to download itag 140 (AAC audio) directly
+const downloadAudio = async (videoUrl, title, reply, conn, from, mek) => {
   try {
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-    const tempVideoFile = `./store/${sanitizedTitle}.mp4`; // Temporary MP4 file
-    const tempAudioFile = `./store/${sanitizedTitle}.mp3`; // Temporary MP3 file
+    const tempAudioFile = `./store/${sanitizedTitle}.m4a`; // Temporary M4A file (AAC format)
 
     // Get video info
     const info = await ytdl.getInfo(videoUrl, ytdlOptions);
     const audioFormat = ytdl
-        .filterFormats(info.formats, "videoandaudio")
-        .find((f) => f.qualityLabel === "360p");
+      .filterFormats(info.formats, "audioonly")
+      .find((f) => f.itag === 140); // Find itag 140 (AAC audio)
 
     if (!audioFormat) {
-      return reply("❌ No itag 140 format found. 😢");
+      return reply("❌ No suitable audio format found. 😢");
     }
 
-    // Download itag 140 as MP4
+    // Download audio directly
     const audioStream = ytdl.downloadFromInfo(info, {
-      quality: audioFormat.itag,
+      format: audioFormat, // Use itag 140
       ...ytdlOptions,
     });
 
     await new Promise((resolve, reject) => {
       audioStream
-        .pipe(fs.createWriteStream(tempVideoFile)) // Save the audio as MP4
+        .pipe(fs.createWriteStream(tempAudioFile)) // Save the audio as M4A
         .on("finish", resolve)
         .on("error", reject);
     });
 
-    // Convert MP4 to MP3 using ffmpeg
-    await new Promise((resolve, reject) => {
-      ffmpeg(tempVideoFile)
-        .audioBitrate(128) // Set audio bitrate to 128 kbps
-        .format("mp3") // Convert to MP3 format
-        .on("end", resolve) // Resolve when conversion is complete
-        .on("error", reject) // Reject on error
-        .save(tempAudioFile); // Save the converted file
-    });
-
-    // Send the MP3 file to the user
+    // Send the M4A file to the user
     await conn.sendMessage(
       from,
       {
-        audio: fs.readFileSync(tempAudioFile), // Read the MP3 file
-        mimetype: "audio/mpeg", // Set MIME type
-        fileName: `${title}.mp3`, // Use the title as the file name
+        audio: fs.readFileSync(tempAudioFile), // Read the M4A file
+        mimetype: "audio/mp4", // Set MIME type for AAC audio
+        fileName: `${title}.m4a`, // Use the title as the file name
       },
       { quoted: mek }
     );
 
     // Clean up temporary files
-    fs.unlinkSync(tempVideoFile); // Delete the MP4 file
-    fs.unlinkSync(tempAudioFile); // Delete the MP3 file
+    fs.unlinkSync(tempAudioFile); // Delete the M4A file
   } catch (e) {
     handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
   }
@@ -386,19 +371,21 @@ cmd(
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
 
       // Send video details to the user
-      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.mp3`;
+      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
       await conn.sendMessage(from, {
         image: { url: video.thumbnails[0].url }, // Send video thumbnail
         caption: ytmsg, // Send video details
       });
 
-      // Download and convert audio
-      await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
+      // Download audio directly using itag 140
+      await downloadAudio(videoUrl, video.title, reply, conn, from, mek);
     } catch (e) {
       handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
     }
   }
 );
+
+
 
 cmd(
   {
