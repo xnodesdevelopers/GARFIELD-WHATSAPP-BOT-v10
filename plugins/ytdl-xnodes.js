@@ -1,5 +1,5 @@
 const { cmd } = require("../command"); // Assuming you have a command handler
-const ytdl = require("ytdl-core"); // For downloading YouTube videos
+const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
 const fs = require("fs"); // For file system operations
 const path = require("path"); // For path operations
