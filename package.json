@@ -25,6 +25,7 @@
     "@whiskeysockets/baileys": "latest",
     "another-fb-video-downloader": "1.0.6",
     "api-dylux": "1.8.5",
+    "cache-manager": "latest",
     "axios": "^1.2.5",
     "btch-downloader": "^2.8.0",
     "puppeteer": "latest",
