@@ -1,8 +1,9 @@
 const { cmd } = require("../command"); // Assuming you have a command handler
-const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
+const ytdl = require("ytdl-core"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
 const fs = require("fs"); // For file system operations
 const path = require("path"); // For path operations
+const { exec } = require("child_process"); // For running ffmpeg commands
 
 // Ensure the ./store directory exists
 const storeDir = "./store";
@@ -12,7 +13,7 @@ if (!fs.existsSync(storeDir)) {
 
 // Custom headers and options for ytdl
 const cookies = [
-
+  
 
   {
     domain: ".youtube.com",
@@ -266,7 +267,8 @@ const cookies = [
     secure: true,
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
-  }
+    }
+  // Add your cookies here if needed
 ];
 
 // Create a custom agent with cookies
@@ -283,7 +285,6 @@ const ytdlOptions = {
   },
   agent: agent, // Use the custom agent with cookies
 };
-
 
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
@@ -306,29 +307,31 @@ const searchVideo = async (query) => {
 const downloadAudio = async (videoUrl, title, reply, conn, from, mek) => {
   try {
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-    const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary M4A file (AAC format)
+    const tempVideoFile = path.join(storeDir, `${sanitizedTitle}.mp4`); // Temporary video file
+    const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary audio file
 
-    // Get video info
-    const info = await ytdl.getInfo(videoUrl, ytdlOptions);
-    const audioFormat = ytdl
-      .filterFormats(info.formats, "audioonly")
-      .find((f) => f.itag === 140); // Find itag 140 (AAC audio)
-
-    if (!audioFormat) {
-      return reply("❌ No suitable audio format found. 😢");
-    }
-
-    // Download audio directly
-    const audioStream = ytdl.downloadFromInfo(info, {
-      format: audioFormat, // Use itag 140
-      ...ytdlOptions,
-    });
-
+    // Download video
+    const videoStream = ytdl(videoUrl, ytdlOptions);
     await new Promise((resolve, reject) => {
-      audioStream
-        .pipe(fs.createWriteStream(tempAudioFile)) // Save the audio as M4A
+      videoStream
+        .pipe(fs.createWriteStream(tempVideoFile))
         .on("finish", resolve)
         .on("error", reject);
+    });
+
+    // Extract audio using ffmpeg
+    await new Promise((resolve, reject) => {
+      exec(
+        `ffmpeg -i "${tempVideoFile}" -vn -acodec copy "${tempAudioFile}"`,
+        (error, stdout, stderr) => {
+          if (error) {
+            console.error(`ffmpeg error: ${stderr}`);
+            reject(error);
+          } else {
+            resolve();
+          }
+        }
+      );
     });
 
     // Send the M4A file to the user
@@ -336,14 +339,15 @@ const downloadAudio = async (videoUrl, title, reply, conn, from, mek) => {
       from,
       {
         audio: fs.readFileSync(tempAudioFile), // Read the M4A file
-        mimetype: "audio/m4a", // Set MIME type for AAC audio
+        mimetype: "audio/mp4", // Set MIME type for AAC audio
         fileName: `${title}.m4a`, // Use the title as the file name
       },
       { quoted: mek }
     );
 
     // Clean up temporary files
-    fs.unlinkSync(tempAudioFile); // Delete the M4A file
+    fs.unlinkSync(tempVideoFile); // Delete the temporary video file
+    fs.unlinkSync(tempAudioFile); // Delete the temporary audio file
   } catch (e) {
     handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
   }
@@ -384,7 +388,7 @@ cmd(
         caption: ytmsg, // Send video details
       });
 
-      // Download audio directly using itag 140
+      // Download audio and send it
       await downloadAudio(videoUrl, video.title, reply, conn, from, mek);
     } catch (e) {
       handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
@@ -392,7 +396,8 @@ cmd(
   }
 );
 
-// Command to download video
+
+
 cmd(
   {
     pattern: "video",
@@ -426,7 +431,7 @@ cmd(
       const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
 
       const sanitizedTitle = video.title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-      const tempFileName = path.join(storeDir, `yt_video_${sanitizedTitle}.mp4`);
+      const tempFileName = `./store/yt_video_${sanitizedTitle}.mp4`;
 
       // Get video info with custom options
       const info = await ytdl.getInfo(videoUrl, ytdlOptions);
