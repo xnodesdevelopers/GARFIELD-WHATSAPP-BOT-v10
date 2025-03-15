@@ -1,12 +1,12 @@
 const { cmd } = require("../command"); // Assuming you have a command handler
-const ytdl = require("@distube/ytdl-core");
-const playdl = require("play-dl"); // Replace yt-search with play-dl
-const fs = require("fs");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
-ffmpeg.setFfmpegPath(ffmpegPath);
+const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
+const playdl = require("play-dl"); // For searching YouTube videos
+const fs = require("fs"); // For file system operations
+const ffmpeg = require("fluent-ffmpeg"); // For converting video to audio
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path; // FFmpeg path
+ffmpeg.setFfmpegPath(ffmpegPath); // Set FFmpeg path
 
-// Add your cookies here if needed
+// Load cookies from environment variables (if needed)
 const cookies = [
 
 
@@ -263,8 +263,6 @@ const cookies = [
     session: false,
     value: "csn=97RlpxVlHs01br0r&itct=CCoQ_FoiEwj6qpLg1oiMAxXqY50JHVh_A5AyCmctaGlnaC1yZWNaD0ZFd2hhdF90b193YXRjaJoBBhCOHhieAQ%3D%3D"
   }
-  // Example cookie:
-  // "YSC=abc123; VISITOR_INFO1_LIVE=xyz456; PREF=tz=Asia.Colombo",
 ];
 
 // Create a custom agent with cookies
@@ -284,74 +282,75 @@ const ytdlOptions = {
 
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
-  console.error(e);
+  console.error(e); // Log errors for debugging
   reply(errorMsg);
 };
 
 // Function to search for a video using play-dl
 const searchVideo = async (query) => {
   try {
-    const results = await playdl.search(query, { limit: 1 });
-    return results[0];
+    const results = await playdl.search(query, { limit: 1 }); // Search for the video
+    return results[0]; // Return the first result
   } catch (e) {
-    console.error("Error searching for video:", e);
+    console.error("Error searching for video:", e); // Log search errors
     return null;
   }
 };
 
-// Function to download and convert audio
+// Function to download itag 140 and convert to MP3
 const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) => {
   try {
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, "_"); // Sanitize title for file name
-    const tempFileName = `./store/${sanitizedTitle}_GarfieldBotv10.2_HighQualityAudio.mp3`;
+    const tempVideoFile = `./store/${sanitizedTitle}.mp4`; // Temporary MP4 file
+    const tempAudioFile = `./store/${sanitizedTitle}.mp3`; // Temporary MP3 file
 
-    // Get video info with custom options
+    // Get video info
     const info = await ytdl.getInfo(videoUrl, ytdlOptions);
 
-    // Filter for audio-only formats with 128 kbps bitrate
-    const audioFormat = ytdl
-      .filterFormats(info.formats, "audioonly")
-      .find((f) => f.audioBitrate === 128); // Only 128 kbps
+    // Find the itag 140 format (audio-only, typically M4A)
+    const audioFormat = info.formats.find((f) => f.itag === 140);
 
     if (!audioFormat) {
-      return reply("❌ No suitable audio format found (128 kbps required). 😢");
+      return reply("❌ No itag 140 format found. 😢");
     }
 
-    // Download audio with custom options
+    // Download itag 140 as MP4
     const audioStream = ytdl.downloadFromInfo(info, {
       quality: audioFormat.itag,
       ...ytdlOptions,
     });
 
-    // Use ffmpeg to convert the audio to MP3
     await new Promise((resolve, reject) => {
-      ffmpeg(audioStream)
-        .audioBitrate(128) // Set audio bitrate to 128 kbps
-        .format("mp3") // Convert to MP3 format
-        .on("end", () => {
-          console.log("Audio conversion finished.");
-          resolve();
-        })
-        .on("error", (err) => {
-          console.error("Error during audio conversion:", err);
-          reject(err);
-        })
-        .save(tempFileName); // Save the converted file
+      audioStream
+        .pipe(fs.createWriteStream(tempVideoFile)) // Save the audio as MP4
+        .on("finish", resolve)
+        .on("error", reject);
     });
 
-    // Send the converted audio file
+    // Convert MP4 to MP3 using ffmpeg
+    await new Promise((resolve, reject) => {
+      ffmpeg(tempVideoFile)
+        .audioBitrate(128) // Set audio bitrate to 128 kbps
+        .format("mp3") // Convert to MP3 format
+        .on("end", resolve) // Resolve when conversion is complete
+        .on("error", reject) // Reject on error
+        .save(tempAudioFile); // Save the converted file
+    });
+
+    // Send the MP3 file to the user
     await conn.sendMessage(
       from,
       {
-        audio: fs.readFileSync(tempFileName),
-        mimetype: "audio/mpeg",
-        fileName: `${sanitizedTitle}.mp3`,
+        audio: fs.readFileSync(tempAudioFile), // Read the MP3 file
+        mimetype: "audio/mpeg", // Set MIME type
+        fileName: `${title}.mp3`, // Use the title as the file name
       },
       { quoted: mek }
     );
 
-    // Delete the temporary file
-    fs.unlinkSync(tempFileName);
+    // Clean up temporary files
+    fs.unlinkSync(tempVideoFile); // Delete the MP4 file
+    fs.unlinkSync(tempAudioFile); // Delete the MP3 file
   } catch (e) {
     handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
   }
@@ -369,34 +368,30 @@ cmd(
   },
   async (conn, mek, msg, { from, args, reply }) => {
     try {
-      const searchQuery = args.join(" ");
+      const searchQuery = args.join(" "); // Get the search query
       if (!searchQuery) {
-        return reply(
-          `❗️ Please provide a song name or keywords. 📝\nExample: .song Despacito`
-        );
+        return reply("❗️ Please provide a song name or keywords. 📝\nExample: .song Despacito");
       }
 
       reply("🔍 Searching for the song... 🎵");
 
-      // Search for the song using play-dl
+      // Search for the song
       const video = await searchVideo(searchQuery);
 
       if (!video) {
         return reply(`❌ No results found for "${searchQuery}".`);
       }
 
-      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
+      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
 
-      // Format details message
+      // Send video details to the user
       const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.mp3`;
-
-      // Send song details with thumbnail
       await conn.sendMessage(from, {
-        image: { url: video.thumbnails[0].url },
-        caption: ytmsg,
+        image: { url: video.thumbnails[0].url }, // Send video thumbnail
+        caption: ytmsg, // Send video details
       });
 
-      // Download and convert the audio
+      // Download and convert audio
       await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
     } catch (e) {
       handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
@@ -404,7 +399,6 @@ cmd(
   }
 );
 
-// Command to download video
 cmd(
   {
     pattern: "video",
