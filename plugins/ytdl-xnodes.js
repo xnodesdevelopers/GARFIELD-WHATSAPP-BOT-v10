@@ -344,7 +344,7 @@ cmd(
 
       const writeStream = fs.createWriteStream(tempFileName);
       await new Promise((resolve, reject) => {
-        ytdl(videoUrl, ytdlOptions { format: highestAudioFormat })
+        ytdl(videoUrl, ytdlOptions , { format: highestAudioFormat })
           .pipe(writeStream)
           .on('finish', resolve)
           .on('error', reject);
