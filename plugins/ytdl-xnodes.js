@@ -2,7 +2,7 @@ const { cmd } = require("../command");
 const { search } = require("play-dl"); // Using play-dl for faster searches
 const fs = require("fs");
 const { promisify } = require("util");
-const ytdl = require("ytdl-core"); // Import ytdl-core
+const ytdl = require("@distube/ytdl-core"); // Import ytdl-core
 
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
