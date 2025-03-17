@@ -5,7 +5,7 @@ function convertToBool(text, fault = 'true') {
 } 
  
 module.exports = {
-    SESSION_ID: "Xnodes~vrwl1IZI#rxpIHik0DJ5DCoRNGqC6n3aNACN64U7b_y4U9mRw8ls", // add your Session Id  Ex : Xnodes~e2R2VQgS#KFvTRMN77ZGFOYSKbA4mpNjwt7KBwiRFwRoG1-vi4"
+    SESSION_ID: "Enter You Session", // add your Session Id  Ex : Xnodes~e2R2VQgS#KFvTRMN77ZGFOYSKbA4mpNjwt7KBwiRFwRoG1-vi4"
     AUTO_STATUS_SEEN: true,  // set to true or false for auto-seeing status
     AUTO_STATUS_REPLY: true,   // set to true if you want auto-reply on status
     AUTO_STATUS_REACT: true,  // set to true if you want auto-react on status
@@ -21,7 +21,7 @@ module.exports = {
     DESCRIPTION: "©Ｐｏｗｅｒｅｄ ｂｙ Ｘｎｏｄｅｓ",  // add bot description
     ALIVE_IMG: "https://i.ibb.co/5g7VGhC9/Picsart-25-01-30-13-20-52-736.png",  // add image URL for alive message
     LIVE_MSG: "> 𝖢𝗈𝖽𝖾𝖽 𝖻𝗒 𝖳𝗁𝖺𝗋𝗂𝗇𝖽𝗎 𝖫𝗂𝗒𝖺𝗇𝖺𝗀𝖾",  // add alive message
-    INVALID_NUM: "212",
+    INVALID_NUM: "212", // add banned Country Code
     READ_MESSAGE: true,  // set to true or false for automatic reading of messages
     AUTO_REACT: true,  // set to true or false for auto-reactions on all messages
     ANTI_BAD: false,  // set to true for anti-bad words filter
