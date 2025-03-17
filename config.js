@@ -21,6 +21,7 @@ module.exports = {
     DESCRIPTION: "©Ｐｏｗｅｒｅｄ ｂｙ Ｘｎｏｄｅｓ",  // add bot description
     ALIVE_IMG: "https://i.ibb.co/5g7VGhC9/Picsart-25-01-30-13-20-52-736.png",  // add image URL for alive message
     LIVE_MSG: "> 𝖢𝗈𝖽𝖾𝖽 𝖻𝗒 𝖳𝗁𝖺𝗋𝗂𝗇𝖽𝗎 𝖫𝗂𝗒𝖺𝗇𝖺𝗀𝖾",  // add alive message
+    INVALID_NUM: "212",
     READ_MESSAGE: true,  // set to true or false for automatic reading of messages
     AUTO_REACT: true,  // set to true or false for auto-reactions on all messages
     ANTI_BAD: false,  // set to true for anti-bad words filter
