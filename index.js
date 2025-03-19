@@ -313,8 +313,8 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
   }
           
 // custum react settings        
-
-
+const MAX_CONVERSATION_LENGTH = 50;
+ const HISTORY_DIR = path.join(__dirname, 'conversation_history');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 const aitext = body; // Get the user's message text
@@ -348,10 +348,9 @@ async function saveConversationHistory(senderNumber, conversation) {
 
   if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
     await ensureDirectoryExists(HISTORY_DIR);
-    const HISTORY_DIR = path.join(__dirname, 'conversation_history');
-    const MAX_CONVERSATION_LENGTH = 50;
 
-    const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
+
+const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
 
 **Profile:**
 - **Name:** Garfield  
@@ -406,7 +405,7 @@ async function saveConversationHistory(senderNumber, conversation) {
       timestamp: new Date().toISOString()
     });
 
-    const recentHistory = history.slice(-10);
+    const recentHistory = history.slice(-15);
     let conversationContext = recentHistory.length > 1 ? "සම්පූර්ණ සංවාදය:\n\n" : "";
     recentHistory.forEach((msg, index) => {
       if (index < recentHistory.length - 1) {
