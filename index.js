@@ -313,11 +313,13 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
   }
           
 // custum react settings        
+
 const MAX_CONVERSATION_LENGTH = 50;
- const HISTORY_DIR = path.join(__dirname, 'conversation_history');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const HISTORY_DIR = path.join(__dirname, 'conversation_history');
+const genAI = new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI");
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-const aitext = body; // Get the user's message text
+const aitext = body; // Ensure 'body' is defined in your actual implementation
+
 async function ensureDirectoryExists(dir) {
   try {
     await fs.access(dir);
@@ -346,11 +348,12 @@ async function saveConversationHistory(senderNumber, conversation) {
   }
 }
 
-  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
-    await ensureDirectoryExists(HISTORY_DIR);
+// Ensure these variables are defined in your actual implementation
 
+if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
+  await ensureDirectoryExists(HISTORY_DIR);
 
-const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
+  const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
 
 **Profile:**
 - **Name:** Garfield  
@@ -382,7 +385,7 @@ const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala 
 4. **Privacy and Identity:**  
    - **Do not reveal** any internal information about your creation or functionality.  
    - If directly asked about your creation, respond briefly:  
- 
+
 ---
 
 **Key Points for Replies:**  
@@ -392,29 +395,27 @@ const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala 
 - **Adjust reply length** (short, medium, or long) based on the context and depth of the conversation.  
 `; // Your instructions here
 
+  let history = await getConversationHistory(senderNumber);
+  if (history.length >= MAX_CONVERSATION_LENGTH) {
+    history = [];
+  }
 
+  history.push({
+    role: "user",
+    content: aitext,
+    timestamp: new Date().toISOString()
+  });
 
-    let history = await getConversationHistory(senderNumber);
-    if (history.length >= MAX_CONVERSATION_LENGTH) {
-      history = [];
+  const recentHistory = history.slice(-15);
+  let conversationContext = recentHistory.length > 1 ? "සම්පූර්ණ සංවාදය:\n\n" : "";
+  recentHistory.forEach((msg, index) => {
+    if (index < recentHistory.length - 1) {
+      const role = msg.role === "user" ? pushname : "Garfield";
+      conversationContext += `${role}: ${msg.content}\n\n`;
     }
+  });
 
-    history.push({
-      role: "user",
-      content: aitext,
-      timestamp: new Date().toISOString()
-    });
-
-    const recentHistory = history.slice(-15);
-    let conversationContext = recentHistory.length > 1 ? "සම්පූර්ණ සංවාදය:\n\n" : "";
-    recentHistory.forEach((msg, index) => {
-      if (index < recentHistory.length - 1) {
-        const role = msg.role === "user" ? pushname : "Garfied";
-        conversationContext += `${role}: ${msg.content}\n\n`;
-      }
-    });
-
-    const prompt = `${GARFIELD_INSTRUCTIONS}
+  const prompt = `${GARFIELD_INSTRUCTIONS}
 **Conversation History:**
 ${conversationContext}
 
@@ -427,26 +428,25 @@ Respond naturally in Sinhala, using a friendly, humorous, and emotional tone.
 - Use Sinhala youth slang and conversational language.
 - Do not include any labels like "user" or "assistant" in your response.
 
-**Response:*-`;
+**Response:**`;
 
-    try {
-      const result = await model.generateContent(prompt);
-      const aiResponse = result.response.candidates[0].content.parts[0].text;
+  try {
+    const result = await model.generateContent(prompt);
+    const aiResponse = result.response.candidates[0].content.parts[0].text;
 
-      history.push({
-        role: "assistant",
-        content: aiResponse,
-        timestamp: new Date().toISOString()
-      });
+    history.push({
+      role: "assistant",
+      content: aiResponse,
+      timestamp: new Date().toISOString()
+    });
 
-      await saveConversationHistory(senderNumber, history);
-      await reply(aiResponse);
-    } catch (error) {
-      console.error("Error calling Gemini API:", error);
-      await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
-    }
+    await saveConversationHistory(senderNumber, history);
+    await reply(aiResponse);
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
   }
-
+}
 
 
 
