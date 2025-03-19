@@ -317,11 +317,41 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+const aitext = body; // Get the user's message text
+async function ensureDirectoryExists(dir) {
+  try {
+    await fs.access(dir);
+  } catch {
+    await fs.mkdir(dir, { recursive: true });
+  }
+}
 
-const HISTORY_DIR = path.join(__dirname, 'conversation_history');
-const MAX_CONVERSATION_LENGTH = 50;
+async function getConversationHistory(senderNumber) {
+  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
+  try {
+    const data = await fs.readFile(historyPath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`Error reading history for ${senderNumber}:`, error);
+    return [];
+  }
+}
 
-const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
+async function saveConversationHistory(senderNumber, conversation) {
+  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
+  try {
+    await fs.writeFile(historyPath, JSON.stringify(conversation, null, 2), 'utf8');
+  } catch (error) {
+    console.error(`Error saving history for ${senderNumber}:`, error);
+  }
+}
+
+  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
+    await ensureDirectoryExists(HISTORY_DIR);
+    const HISTORY_DIR = path.join(__dirname, 'conversation_history');
+    const MAX_CONVERSATION_LENGTH = 50;
+
+    const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
 
 **Profile:**
 - **Name:** Garfield  
@@ -363,36 +393,7 @@ const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala 
 - **Adjust reply length** (short, medium, or long) based on the context and depth of the conversation.  
 `; // Your instructions here
 
-async function ensureDirectoryExists(dir) {
-  try {
-    await fs.access(dir);
-  } catch {
-    await fs.mkdir(dir, { recursive: true });
-  }
-}
 
-async function getConversationHistory(senderNumber) {
-  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
-  try {
-    const data = await fs.readFile(historyPath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error reading history for ${senderNumber}:`, error);
-    return [];
-  }
-}
-
-async function saveConversationHistory(senderNumber, conversation) {
-  const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
-  try {
-    await fs.writeFile(historyPath, JSON.stringify(conversation, null, 2), 'utf8');
-  } catch (error) {
-    console.error(`Error saving history for ${senderNumber}:`, error);
-  }
-}
-
-  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
-    await ensureDirectoryExists(HISTORY_DIR);
 
     let history = await getConversationHistory(senderNumber);
     if (history.length >= MAX_CONVERSATION_LENGTH) {
