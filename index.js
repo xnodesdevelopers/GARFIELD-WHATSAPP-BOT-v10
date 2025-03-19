@@ -314,45 +314,56 @@ if (!isReact && ![botNumber, ownerNumber].includes(senderNumber)) {
           
 // custum react settings        
 
-const MAX_CONVERSATION_LENGTH = 50;
-const HISTORY_DIR = path.join(__dirname, 'conversation_history');
+// Initialize the Google Generative AI
 const genAI = new GoogleGenerativeAI("AIzaSyDCf6RLWDAm0XxxF2n834lRUCKHJAe3LAI");
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-const aitext = body; // Ensure 'body' is defined in your actual implementation
 
-async function ensureDirectoryExists(dir) {
-  try {
-    await fs.access(dir);
-  } catch {
-    await fs.mkdir(dir, { recursive: true });
-  }
+// Directory to store conversation history
+const HISTORY_DIR = path.join(__dirname, 'conversation_history');
+
+// Maximum number of messages before resetting conversation
+const MAX_CONVERSATION_LENGTH = 50;
+
+// Garfield AI instructions as a separate constant
+
+
+// Ensure the directory exists
+if (!fs.existsSync(HISTORY_DIR)) {
+  fs.mkdirSync(HISTORY_DIR, { recursive: true });
 }
 
-async function getConversationHistory(senderNumber) {
+// Function to get conversation history for a specific sender
+function getConversationHistory(senderNumber) {
   const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
-  try {
-    const data = await fs.readFile(historyPath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(`Error reading history for ${senderNumber}:`, error);
-    return [];
+  
+  if (fs.existsSync(historyPath)) {
+    try {
+      const data = fs.readFileSync(historyPath, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error(`Error reading history for ${senderNumber}:`, error);
+      return [];
+    }
   }
+  return [];
 }
 
-async function saveConversationHistory(senderNumber, conversation) {
+// Function to save conversation history
+function saveConversationHistory(senderNumber, conversation) {
   const historyPath = path.join(HISTORY_DIR, `${senderNumber}.json`);
   try {
-    await fs.writeFile(historyPath, JSON.stringify(conversation, null, 2), 'utf8');
+    fs.writeFileSync(historyPath, JSON.stringify(conversation, null, 2), 'utf8');
   } catch (error) {
     console.error(`Error saving history for ${senderNumber}:`, error);
   }
 }
 
-// Ensure these variables are defined in your actual implementation
+// Function to handle AI messaging
 
-if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
-  await ensureDirectoryExists(HISTORY_DIR);
-
+  const aitext = body;
+  
+  // Check if the message is from a group or starts with a specific character
+  if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.')) {
   const GARFIELD_INSTRUCTIONS = `**WhatsApp Bot Integration: Garfield AI (Sinhala Language)**
 
 **Profile:**
@@ -385,7 +396,7 @@ if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.'))
 4. **Privacy and Identity:**  
    - **Do not reveal** any internal information about your creation or functionality.  
    - If directly asked about your creation, respond briefly:  
-
+ 
 ---
 
 **Key Points for Replies:**  
@@ -393,29 +404,44 @@ if (botNumber !== senderNumber && !isGroup && aitext && !aitext.startsWith('.'))
 - Use **Sinhala slang** and **cultural references** to make the conversation relatable.  
 - Avoid robotic or generic responses—keep it **human-like and fun**.  
 - **Adjust reply length** (short, medium, or long) based on the context and depth of the conversation.  
-`; // Your instructions here
+`;
+    // Get conversation history for this sender
+    let history = getConversationHistory(senderNumber);
+    
+    // Check if conversation length exceeds MAX_CONVERSATION_LENGTH
+    if (history.length >= MAX_CONVERSATION_LENGTH) {
+      // Reset conversation history
+      history = [];
+      console.log(`Conversation reset for ${senderNumber} after reaching ${MAX_CONVERSATION_LENGTH} messages`);
+      
+      // Optional: Notify user that conversation has been reset
 
-  let history = await getConversationHistory(senderNumber);
-  if (history.length >= MAX_CONVERSATION_LENGTH) {
-    history = [];
-  }
-
-  history.push({
-    role: "user",
-    content: aitext,
-    timestamp: new Date().toISOString()
-  });
-
-  const recentHistory = history.slice(-15);
-  let conversationContext = recentHistory.length > 1 ? "සම්පූර්ණ සංවාදය:\n\n" : "";
-  recentHistory.forEach((msg, index) => {
-    if (index < recentHistory.length - 1) {
-      const role = msg.role === "user" ? pushname : "Garfield";
-      conversationContext += `${role}: ${msg.content}\n\n`;
     }
-  });
-
-  const prompt = `${GARFIELD_INSTRUCTIONS}
+    
+    // Add the user's message to history
+    history.push({
+      role: "user",
+      content: aitext,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Keep only the last 10 messages for context (but keep all in history)
+    const recentHistory = history.slice(-10);
+    
+    // Format the conversation history as context
+    let conversationContext = "";
+    if (recentHistory.length > 1) {
+      conversationContext = "සම්පූර්ණ සංවාදය:\n\n";
+      recentHistory.forEach((msg, index) => {
+        if (index < recentHistory.length - 1) { // Don't include the latest message
+          const role = msg.role === "user" ? `${pushname}` : "Garfield";
+          conversationContext += `${role}: ${msg.content}\n\n`;
+        }
+      });
+    }
+    
+    // Prepare the Sinhala prompt for Gemini API with conversation history
+    const prompt = `${GARFIELD_INSTRUCTIONS}
 **Conversation History:**
 ${conversationContext}
 
@@ -426,35 +452,35 @@ ${conversationContext}
 Respond naturally in Sinhala, using a friendly, humorous, and emotional tone.
 **Special Notes:**
 - Use Sinhala youth slang and conversational language.
-- Do not include any labels like "user" or "assistant" in your response.
+- Do not include any labels like "user" or "assistant" , "Garfield" in your response.
 
-**Response:**`;
+**Response:*-`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const aiResponse = result.response.candidates[0].content.parts[0].text;
-
-    history.push({
-      role: "assistant",
-      content: aiResponse,
-      timestamp: new Date().toISOString()
-    });
-
-    await saveConversationHistory(senderNumber, history);
-    await reply(aiResponse);
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
+    try {
+      // Call Gemini API
+      const result = await model.generateContent(prompt);
+      
+      // Extract the AI response
+      const aiResponse = result.response.candidates[0].content.parts[0].text;
+      
+      // Save the AI response to history
+      history.push({
+        role: "assistant",
+        content: aiResponse,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Save updated history
+      saveConversationHistory(senderNumber, history);
+      
+      // Send the response
+      await reply(`${aiResponse}`);
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      await reply("❌ Garfield AI පිළිතුරු ලබා ගැනීමට අසමත් විය. 😢");
+    }
   }
-}
 
-
-
-// Google Gemini API Key
-// API Key එක environment variable එකකින් ගන්න එක ආරක්ෂිතයි
-
-// Replace with your actual API key or use environment variables
-// Initialize the Google Generative AI
 
 // Example usage in your WhatsApp bot handler
 
