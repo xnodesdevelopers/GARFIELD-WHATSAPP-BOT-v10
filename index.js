@@ -406,7 +406,7 @@ async function saveConversationHistory(senderNumber, conversation) {
       timestamp: new Date().toISOString()
     });
 
-    const recentHistory = history.slice(-15);
+    const recentHistory = history.slice(-10);
     let conversationContext = recentHistory.length > 1 ? "සම්පූර්ණ සංවාදය:\n\n" : "";
     recentHistory.forEach((msg, index) => {
       if (index < recentHistory.length - 1) {
