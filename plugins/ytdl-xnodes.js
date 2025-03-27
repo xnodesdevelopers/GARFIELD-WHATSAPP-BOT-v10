@@ -46,9 +46,9 @@ ydl_opts = {
     'no_warnings': True,
     'extract_flat': False,
     'postprocessors': [{
-        'key': 'FFmpegVideoConvertor' if media_type == 'video' else 'FFmpegExtractAudio',
-        'preferedformat': 'mp4' if media_type == 'video' else 'mp3'
-    }]
+    'key': 'FFmpegVideoConvertor' if media_type == 'video' else 'FFmpegExtractAudio',
+    'preferredformat': 'mp4' if media_type == 'video' else 'mp3'
+}]
 }
 
 try:
