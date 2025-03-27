@@ -1,5 +1,3 @@
-මෙහි python script එක වෙනම lib/ytdl.py ලෙස හා js file එක plugins/ytd.js 
-ලෙස වෙන වෙනම තියා ලියන්න
 const { cmd } = require("../command");
 const { execSync } = require('child_process');
 const fs = require('fs');
