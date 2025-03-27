@@ -1,5 +1,5 @@
 const { cmd } = require("../command");
-const { execSync } = require('child_process');
+const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const playdl = require("play-dl");
@@ -7,7 +7,15 @@ const playdl = require("play-dl");
 // Configuration
 const STORE_DIR = "./store";
 const PYTHON_PATH = process.env.PYTHON_PATH || 'python3';
-const PYTHON_SCRIPT = `
+
+// Ensure store directory exists
+if (!fs.existsSync(STORE_DIR)) {
+    fs.mkdirSync(STORE_DIR);
+}
+
+// Python script template
+function getPythonScript(storeDir) {
+    return `
 import yt_dlp
 import sys
 import json
@@ -20,7 +28,7 @@ def sanitize_filename(title):
 def download_media(url, media_type):
     ydl_opts = {
         'format': 'bestvideo[height<=360]+bestaudio/best[height<=360]' if media_type == 'video' else 'bestaudio[abr<=128]/best',
-        'outtmpl': f'${STORE_DIR}/%(title)s.%(ext)s',
+        'outtmpl': '${storeDir}/%(title)s.%(ext)s',
         'quiet': True,
         'no_warnings': True,
         'postprocessors': [
@@ -53,30 +61,48 @@ def download_media(url, media_type):
         return {'success': False, 'error': str(e)}
 
 if __name__ == "__main__":
-    args = json.loads(sys.stdin.read())
-    result = download_media(args['url'], args['media_type'])
-    print(json.dumps(result))
+    try:
+        args = json.loads(sys.stdin.read())
+        result = download_media(args['url'], args['media_type'])
+        print(json.dumps(result))
+    except Exception as e:
+        print(json.dumps({'success': False, 'error': f'Python runtime error: {str(e)}'}))
 `;
-
-// Ensure store directory exists
-if (!fs.existsSync(STORE_DIR)) {
-    fs.mkdirSync(STORE_DIR);
 }
 
 // Helper functions
 const callPythonDL = async (url, mediaType) => {
-    const input = JSON.stringify({ url, media_type: mediaType });
-    try {
-        const result = execSync(`${PYTHON_PATH} -c "${PYTHON_SCRIPT}"`, { 
-            input,
-            maxBuffer: 50 * 1024 * 1024,
-            stdio: ['pipe', 'pipe', 'ignore']
-        }).toString();
-        return JSON.parse(result);
-    } catch (e) {
-        console.error('Python error:', e);
-        return { success: false, error: e.message };
-    }
+    return new Promise((resolve) => {
+        const pythonScript = getPythonScript(STORE_DIR);
+        const child = exec(`${PYTHON_PATH} -c "${pythonScript}"`, {
+            maxBuffer: 50 * 1024 * 1024
+        }, (error, stdout, stderr) => {
+            if (error) {
+                console.error('Execution error:', error);
+                return resolve({ 
+                    success: false, 
+                    error: `Execution failed: ${error.message}`
+                });
+            }
+
+            try {
+                const result = JSON.parse(stdout);
+                resolve(result);
+            } catch (e) {
+                console.error('Parse error:', e);
+                resolve({ 
+                    success: false, 
+                    error: `Failed to parse response: ${e.message}`
+                });
+            }
+        });
+
+        // Send input to Python process
+        child.stdin.end(JSON.stringify({ 
+            url, 
+            media_type: mediaType 
+        }));
+    });
 };
 
 const searchVideo = async (query) => {
@@ -100,7 +126,8 @@ cmd(
         react: "🎶",
         desc: "Download YouTube audio (128kbps)",
         category: "main",
-        use: ".song <query>"
+        use: ".song <query>",
+        filename: __filename
     },
     async (conn, mek, msg, { from, args, reply }) => {
         try {
@@ -109,17 +136,19 @@ cmd(
 
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
-
-            const result = await callPythonDL(`https://youtu.be/${video.id}`, 'audio');
-
-            if (!result.success) {
-                return reply(`❌ Download failed: ${result.error}`);
-            }
-          const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
+      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
       await conn.sendMessage(from, {
         image: { url: video.thumbnails[0].url }, // Send video thumbnail
         caption: ytmsg, // Send video details
       });
+
+            const result = await callPythonDL(`https://youtu.be/${video.id}`, 'audio');
+
+            if (!result.success) {
+                console.error('Download failed:', result.error);
+                return reply(`❌ Download failed: ${result.error}\n\nTry again later or contact admin.`);
+            }
+
             await conn.sendMessage(
                 from,
                 {
@@ -133,7 +162,7 @@ cmd(
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
-            reply("❌ An error occurred while processing your request");
+            reply("❌ An unexpected error occurred");
         }
     }
 );
@@ -144,7 +173,8 @@ cmd(
         react: "🎥",
         desc: "Download YouTube video (360p)",
         category: "main",
-        use: ".video <query>"
+        use: ".video <query>",
+        filename: __filename
     },
     async (conn, mek, msg, { from, args, reply }) => {
         try {
@@ -154,13 +184,14 @@ cmd(
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
 
+
+      const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
             const result = await callPythonDL(`https://youtu.be/${video.id}`, 'video');
 
             if (!result.success) {
-                return reply(`❌ Download failed: ${result.error}`);
+                console.error('Download failed:', result.error);
+                return reply(`❌ Download failed: ${result.error}\n\nTry again later or contact admin.`);
             }
-            
-      const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
 
             await conn.sendMessage(
                 from,
@@ -175,14 +206,13 @@ cmd(
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
-            reply("❌ An error occurred while processing your request");
+            reply("❌ An unexpected error occurred");
         }
     }
 );
 
 // Cleanup handler
 process.on('exit', () => {
-    // Clean up store directory on exit
     if (fs.existsSync(STORE_DIR)) {
         fs.rmSync(STORE_DIR, { recursive: true });
     }
