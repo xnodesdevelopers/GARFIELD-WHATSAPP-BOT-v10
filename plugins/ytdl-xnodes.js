@@ -10,133 +10,114 @@ const PYTHON_PATH = process.platform === 'win32' ? 'python' : 'python3';
 const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdl.py");
 
 // Ensure store directory exists
-try {
-    if (!fs.existsSync(STORE_DIR)) {
-        fs.mkdirSync(STORE_DIR, { recursive: true });
-    }
-} catch (err) {
-    console.error(`Failed to create store directory: ${err.message}`);
-    process.exit(1);
+if (!fs.existsSync(STORE_DIR)) {
+    fs.mkdirSync(STORE_DIR, { recursive: true });
 }
 
-// Helper functions
 const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-const downloadMedia = async (url, type, quality) => {
+const downloadMedia = async (url, type) => {
     try {
         const result = execSync(
-            `${PYTHON_PATH} "${PYTHON_SCRIPT}" "${url}" "${type}" "${quality}" "${STORE_DIR}"`,
-            { maxBuffer: 50 * 1024 * 1024 }
+            `"${PYTHON_PATH}" "${PYTHON_SCRIPT}" "${url}" "${type}" "${STORE_DIR}"`,
+            { maxBuffer: 100 * 1024 * 1024 }
         ).toString();
         return JSON.parse(result);
     } catch (e) {
-        return { success: false, error: e.message };
+        return { 
+            success: false, 
+            error: e.message,
+            type: 'execution_error'
+        };
     }
 };
 
-const searchVideo = async (query) => {
-    try {
-        const results = await playdl.search(query, { limit: 5 });
-        return results[0];
-    } catch (e) {
-        console.error("Search error:", e);
-        return null;
-    }
-};
-
+// Audio Command
 cmd(
     {
         pattern: "song",
         react: "🎶",
-        desc: "Download YouTube audio",
-        category: "main",
-        use: ".song <query>",
-        filename: __filename
+        desc: "Download audio (m4a format)",
+        category: "media",
+        use: ".song <query/url>"
     },
     async (conn, mek, msg, { from, args, reply }) => {
         try {
-            const query = args.join(' ');
-            if (!query) return reply("Please provide a search query");
-            
-            const video = await searchVideo(query);
-            if (!video) return reply("No results found");
+            const input = args.join(' ');
+            if (!input) return reply("Provide search query or YouTube URL");
 
-            const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}`;
-            
-            await conn.sendMessage(from, {
-                image: { url: video.thumbnails[0].url },
-                caption: ytmsg,
-            });
+            let video;
+            if (input.match(/youtu\.?be/)) {
+                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                if (!videoId) return reply("Invalid URL");
+                video = { id: videoId };
+            } else {
+                const results = await playdl.search(input, { limit: 1 });
+                if (!results.length) return reply("No results found");
+                video = results[0];
+            }
 
-            const result = await downloadMedia(
-                `https://youtu.be/${video.id}`,
-                'audio',
-                '360'
-            );
+            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'audio');
             
-            if (!result.success) {
-                return reply(`❌ Download failed: ${result.error}`);
-            }
-            
-            const stats = fs.statSync(result.filename);
-            if (stats.size === 0) {
-                fs.unlinkSync(result.filename);
-                return reply("❌ Downloaded file is empty");
-            }
-            
+            if (!result.success) return reply(`❌ Failed: ${result.error}`);
+      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
+      await conn.sendMessage(from, {
+        image: { url: video.thumbnails[0].url }, // Send video thumbnail
+        caption: ytmsg, // Send video details
+      });
+
+
+
             await conn.sendMessage(
                 from,
                 {
                     audio: fs.readFileSync(result.filename),
-                    mimetype: 'audio/mpeg',
-                    fileName: `${cleanFilename(video.title)}.mp3`
+                    mimetype: 'audio/mp4',
+                    fileName: `${cleanFilename(result.title)}.m4a`
                 },
                 { quoted: mek }
             );
-            
+
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
-            reply("❌ An error occurred");
+            reply("❌ Audio download error");
         }
     }
 );
 
+// Video Command (360p)
 cmd(
     {
         pattern: "video",
-        react: "🎥",
-        desc: "Download YouTube video",
-        category: "main",
-        use: ".video <query>",
-        filename: __filename
+        react: "🎬",
+        desc: "Download video (360p)",
+        category: "media",
+        use: ".video <query/url>"
     },
     async (conn, mek, msg, { from, args, reply }) => {
         try {
-            const query = args.join(' ');
-            if (!query) return reply("Please provide a search query");
-            
-            const video = await searchVideo(query);
-            if (!video) return reply("No results found");
-            
-            const result = await downloadMedia(
-                `https://youtu.be/${video.id}`,
-                'video',
-                '720'
-            );
-            
-            if (!result.success) {
-                return reply(`❌ Download failed: ${result.error}`);
+            const input = args.join(' ');
+            if (!input) return reply("Provide search query or YouTube URL");
+
+            let video;
+            if (input.match(/youtu\.?be/)) {
+                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                if (!videoId) return reply("Invalid URL");
+                video = { id: videoId };
+            } else {
+                const results = await playdl.search(input, { limit: 1 });
+                if (!results.length) return reply("No results found");
+                video = results[0];
             }
+
+                 const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
+
+
+            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'video');
             
-            const stats = fs.statSync(result.filename);
-            if (stats.size === 0) {
-                fs.unlinkSync(result.filename);
-                return reply("❌ Downloaded file is empty");
-            }
-            
-            const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}`;
-            
+            if (!result.success) return reply(`❌ Failed: ${result.error}`);
+
             await conn.sendMessage(
                 from,
                 {
@@ -146,26 +127,11 @@ cmd(
                 },
                 { quoted: mek }
             );
-            
+
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
-            reply("❌ An error occurred");
+            reply("❌ Video download error");
         }
     }
 );
-
-process.on('exit', () => {
-    try {
-        if (fs.existsSync(STORE_DIR)) {
-            fs.rmSync(STORE_DIR, { recursive: true, force: true });
-        }
-    } catch (err) {
-        console.error(`Failed to remove store directory: ${err.message}`);
-    }
-});
-
-module.exports = {
-    downloadMedia,
-    searchVideo
-};
