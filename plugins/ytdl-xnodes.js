@@ -34,37 +34,66 @@ import json
 import sys
 import os
 
-url = sys.argv[1]
-media_type = sys.argv[2]
-quality = sys.argv[3]
-store_dir = sys.argv[4]
+def download_media(url, media_type, quality, store_dir):
+    ydl_opts = {
+        'format': (
+            f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]' 
+            if media_type == 'video' 
+            else f'bestaudio[abr<=128]/best'
+        ),
+        'outtmpl': os.path.join(store_dir, '%(id)s.%(ext)s'),
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+        'postprocessors': [{
+            'key': 'FFmpegVideoConvertor' if media_type == 'video' else 'FFmpegExtractAudio',
+            'preferredformat': 'mp4' if media_type == 'video' else 'mp3'
+        }]
+    }
 
-ydl_opts = {
-    'format': f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]' if media_type == 'video' else f'bestaudio[abr<=128]/best',
-    'outtmpl': os.path.join(store_dir, '%(id)s.%(ext)s'),
-    'quiet': True,
-    'no_warnings': True,
-    'extract_flat': False,
-    'postprocessors': [{
-    'key': 'FFmpegVideoConvertor' if media_type == 'video' else 'FFmpegExtractAudio',
-    'preferredformat': 'mp4' if media_type == 'video' else 'mp3'
-}]
-}
-
-try:
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            
+            print(json.dumps({
+                'success': True,
+                'filename': filename,
+                'title': info.get('title'),
+                'duration': info.get('duration'),
+                'thumbnail': info.get('thumbnail')
+            }))
+    except Exception as e:
         print(json.dumps({
-            'success': True,
-            'filename': filename,
-            'title': info.get('title'),
-            'duration': info.get('duration'),
-            'thumbnail': info.get('thumbnail')
+            'success': False, 
+            'error': str(e)
         }))
-except Exception as e:
-    print(json.dumps({'success': False, 'error': str(e)}))
-`;
+
+def main():
+    if len(sys.argv) != 5:
+        print(json.dumps({
+            'success': False, 
+            'error': 'Incorrect number of arguments'
+        }))
+        sys.exit(1)
+
+    url = sys.argv[1]
+    media_type = sys.argv[2]
+    quality = sys.argv[3]
+    store_dir = sys.argv[4]
+
+    if media_type not in ['video', 'audio']:
+        print(json.dumps({
+            'success': False, 
+            'error': 'Invalid media type. Must be "video" or "audio"'
+        }))
+        sys.exit(1)
+
+    download_media(url, media_type, quality, store_dir)
+
+if __name__ == "__main__":
+    main()
+    `;
 
     try {
         const result = execSync(
@@ -103,34 +132,35 @@ cmd(
         try {
             const query = args.join(' ');
             if (!query) return reply("Please provide a search query");
-
+            
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
-      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
-      await conn.sendMessage(from, {
-        image: { url: video.thumbnails[0].url }, // Send video thumbnail
-        caption: ytmsg, // Send video details
-      });
 
+            const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
+            
+            await conn.sendMessage(from, {
+                image: { url: video.thumbnails[0].url }, // Send video thumbnail
+                caption: ytmsg, // Send video details
+            });
 
             const result = await downloadMedia(
                 `https://youtu.be/${video.id}`,
                 'audio',
                 '360'
             );
-
+            
             if (!result.success) {
                 console.error('Download failed:', result.error);
                 return reply(`❌ Download failed: ${result.error}`);
             }
-
+            
             // Add file size check
             const stats = fs.statSync(result.filename);
             if (stats.size === 0) {
                 fs.unlinkSync(result.filename);
                 return reply("❌ Downloaded file is empty");
             }
-
+            
             await conn.sendMessage(
                 from,
                 {
@@ -140,7 +170,7 @@ cmd(
                 },
                 { quoted: mek }
             );
-
+            
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
@@ -163,31 +193,30 @@ cmd(
         try {
             const query = args.join(' ');
             if (!query) return reply("Please provide a search query");
-
+            
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
-
-
+            
             const result = await downloadMedia(
                 `https://youtu.be/${video.id}`,
                 'video',
                 '360'
             );
-
+            
             if (!result.success) {
                 console.error('Download failed:', result.error);
                 return reply(`❌ Download failed: ${result.error}`);
             }
-
+            
             // Add file size check
             const stats = fs.statSync(result.filename);
             if (stats.size === 0) {
                 fs.unlinkSync(result.filename);
                 return reply("❌ Downloaded file is empty");
             }
-                  const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
-
-
+            
+            const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
+            
             await conn.sendMessage(
                 from,
                 {
@@ -197,7 +226,7 @@ cmd(
                 },
                 { quoted: mek }
             );
-
+            
             fs.unlinkSync(result.filename);
         } catch (e) {
             console.error(e);
@@ -217,7 +246,7 @@ process.on('exit', () => {
     }
 });
 
-module.exports = { 
-    downloadMedia, 
-    searchVideo 
+module.exports = {
+    downloadMedia,
+    searchVideo
 };
