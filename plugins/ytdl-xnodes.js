@@ -11,9 +11,6 @@ const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdl.py");
 const COOKIES_FILE = path.join(__dirname, "../lib/cookies.txt");
 
 // Ensure directories exist
-if (!fs.existsSync(STORE_DIR)) {
-    fs.mkdirSync(STORE_DIR, { recursive: true });
-}
 
 const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 64);
 
@@ -24,34 +21,62 @@ const downloadMedia = (url, type) => {
         if (fs.existsSync(COOKIES_FILE)) {
             command += ` "${COOKIES_FILE}"`;
         }
-
+        
         exec(
             command,
             { maxBuffer: 100 * 1024 * 1024 },
             (error, stdout, stderr) => {
                 if (error) {
-                    resolve({ 
-                        success: false, 
+                    resolve({
+                        success: false,
                         error: stderr || error.message,
                         type: 'execution_error'
                     });
                     return;
                 }
-
+                
                 try {
                     const result = JSON.parse(stdout);
-                    result.filename = path.resolve(result.filename);
+                    if (result.success && result.filename) {
+                        result.filename = path.resolve(result.filename);
+                    }
                     resolve(result);
                 } catch (e) {
                     resolve({
                         success: false,
-                        error: 'Failed to parse response',
+                        error: `Failed to parse response: ${stdout || 'No output'}`,
                         type: 'parse_error'
                     });
                 }
             }
         );
     });
+};
+
+const extractVideoInfo = async (input) => {
+    try {
+        let videoInfo;
+        const youtubeUrlRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const urlMatch = input.match(youtubeUrlRegex);
+
+        if (urlMatch) {
+            // Direct YouTube URL
+            const videoId = urlMatch[1];
+            videoInfo = await playdl.video_info(`https://youtu.be/${videoId}`);
+        } else {
+            // Search query
+            const results = await playdl.search(input, { limit: 1 });
+            if (!results.length) {
+                throw new Error("No results found");
+            }
+            videoInfo = await playdl.video_info(results[0].url);
+        }
+
+        return videoInfo.video_details;
+    } catch (error) {
+        console.error("Video info extraction error:", error);
+        return null;
+    }
 };
 
 // Audio Command
@@ -68,24 +93,14 @@ cmd(
             const input = args.join(' ').trim();
             if (!input) return reply("Provide search query or YouTube URL");
 
-            let videoInfo;
-            if (input.match(/youtu\.?be/)) {
-                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                if (!videoId) return reply("Invalid URL");
-                videoInfo = await playdl.video_info(`https://youtu.be/${videoId}`);
-            } else {
-                const results = await playdl.search(input, { limit: 1 });
-                if (!results.length) return reply("No results found");
-                videoInfo = await playdl.video_info(results[0].url);
-            }
+            const video = await extractVideoInfo(input);
+            if (!video) return reply("❌ Failed to extract video information");
 
-            const video = videoInfo.video_details;
             const result = await downloadMedia(video.url, 'audio');
-            
             if (!result.success) return reply(`❌ Failed: ${result.error}`);
 
             const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
-            
+
             await conn.sendMessage(from, {
                 image: { url: video.thumbnails[0].url },
                 caption: ytmsg
@@ -102,10 +117,9 @@ cmd(
             );
 
             fs.unlinkSync(result.filename);
-
         } catch (e) {
             console.error(e);
-            reply("❌ Audio download error");
+            reply("❌ Audio download error: " + e.message);
         }
     }
 );
@@ -124,24 +138,14 @@ cmd(
             const input = args.join(' ').trim();
             if (!input) return reply("Provide search query or YouTube URL");
 
-            let videoInfo;
-            if (input.match(/youtu\.?be/)) {
-                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                if (!videoId) return reply("Invalid URL");
-                videoInfo = await playdl.video_info(`https://youtu.be/${videoId}`);
-            } else {
-                const results = await playdl.search(input, { limit: 1 });
-                if (!results.length) return reply("No results found");
-                videoInfo = await playdl.video_info(results[0].url);
-            }
+            const video = await extractVideoInfo(input);
+            if (!video) return reply("❌ Failed to extract video information");
 
-            const video = videoInfo.video_details;
             const result = await downloadMedia(video.url, 'video');
-            
             if (!result.success) return reply(`❌ Failed: ${result.error}`);
 
             const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
-            
+
             await conn.sendMessage(
                 from,
                 {
@@ -153,10 +157,9 @@ cmd(
             );
 
             fs.unlinkSync(result.filename);
-
         } catch (e) {
             console.error(e);
-            reply("❌ Video download error");
+            reply("❌ Video download error: " + e.message);
         }
     }
 );
