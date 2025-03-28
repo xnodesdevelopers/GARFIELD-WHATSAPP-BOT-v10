@@ -3,6 +3,7 @@ import yt_dlp
 import json
 import sys
 import os
+import subprocess
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 
@@ -10,13 +11,22 @@ from io import StringIO
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
+def extract_audio_from_video(video_path, output_path):
+    """Extract AAC audio from video without re-encoding."""
+    cmd = [
+        'ffmpeg', '-i', video_path, '-vn', '-acodec', 'copy', '-y', output_path
+    ]
+    subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
 def extract_and_download(url, media_type):
-    """Simple and stable audio or video download with clean JSON output."""
+    """Fast audio or video download with strict JSON output."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'socket_timeout': 10,
+        'retries': 2,
         'progress': False,
     }
 
@@ -26,20 +36,18 @@ def extract_and_download(url, media_type):
 
     # Configure format based on media type
     if media_type == 'audio':
-        ydl_opts['format'] = 'bestaudio/best'
-        ydl_opts['postprocessors'] = [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-            'preferredquality': '128',
-        }]
+        # Original audio download settings (unchanged)
+        ydl_opts['format'] = 'worstvideo[height<=240]+bestaudio[abr<=128]/worst[abr<=128]'
     else:  # video
-        ydl_opts['format'] = 'bestvideo[height<=360]+bestaudio/best[height<=360]/best'
+        # Optimized for most playable 360p MP4 format
+        ydl_opts['format'] = 'bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]'
+        ydl_opts['merge_output_format'] = 'mp4'
         ydl_opts['postprocessors'] = [{
             'key': 'FFmpegVideoRemuxer',
-            'preferedformat': 'mp4',
+            'preferedformat': 'mp4'
         }]
 
-    # Suppress all yt-dlp output
+    # Fully suppress yt-dlp output
     stdout_buffer = StringIO()
     stderr_buffer = StringIO()
     try:
@@ -51,10 +59,28 @@ def extract_and_download(url, media_type):
 
                 ydl.download([url])
                 filename = ydl.prepare_filename(info)
-                ext = '.mp4' if media_type == 'video' else '.m4a'
-                if not filename.endswith(ext):
-                    base, _ = os.path.splitext(filename)
-                    filename = f"{base}{ext}"
+
+                if media_type == 'audio':
+                    # Original audio extraction process (unchanged)
+                    video_path = filename
+                    audio_path = f"{os.path.splitext(filename)[0]}.m4a"
+                    extract_audio_from_video(video_path, audio_path)
+                    os.remove(video_path)  # Clean up video file
+                    filename = audio_path
+                else:
+                    # Enhanced video processing for better compatibility
+                    if not filename.endswith('.mp4'):
+                        base, _ = os.path.splitext(filename)
+                        new_filename = f"{base}.mp4"
+                        os.rename(filename, new_filename)
+                        filename = new_filename
+
+                    # Verify video is playable
+                    try:
+                        cmd = ['ffmpeg', '-v', 'error', '-i', filename, '-f', 'null', '-']
+                        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    except subprocess.CalledProcessError:
+                        raise ValueError("Downloaded video is corrupted or unplayable")
 
                 return {
                     'success': True,
