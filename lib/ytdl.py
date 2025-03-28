@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import yt_dlp
 import json
@@ -7,9 +8,11 @@ import subprocess
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 
+
 # Define paths
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
+
 
 def extract_audio_from_video(video_path, output_path):
     """Extract AAC audio from video without re-encoding."""
@@ -17,6 +20,7 @@ def extract_audio_from_video(video_path, output_path):
         'ffmpeg', '-i', video_path, '-vn', '-acodec', 'copy', '-y', output_path
     ]
     subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+
 
 def extract_and_download(url, media_type):
     """Fast audio or video download with strict JSON output."""
@@ -30,9 +34,11 @@ def extract_and_download(url, media_type):
         'progress': False,
     }
 
+
     # Use cookies if available
     if os.path.exists(COOKIES_FILE):
         ydl_opts['cookiefile'] = COOKIES_FILE
+
 
     # Configure format based on media type
     if media_type == 'audio':
@@ -46,6 +52,7 @@ def extract_and_download(url, media_type):
             'preferedformat': 'mp4'
         }]
 
+
     # Fully suppress yt-dlp output
     stdout_buffer = StringIO()
     stderr_buffer = StringIO()
@@ -56,8 +63,10 @@ def extract_and_download(url, media_type):
                 if not info or 'title' not in info:
                     raise ValueError("Failed to extract metadata")
 
+
                 ydl.download([url])
                 filename = ydl.prepare_filename(info)
+
 
                 if media_type == 'audio':
                     # Extract audio from low-quality video
@@ -72,6 +81,7 @@ def extract_and_download(url, media_type):
                     if not filename.endswith(ext):
                         base, _ = os.path.splitext(filename)
                         filename = f"{base}{ext}"
+
 
                 return {
                     'success': True,
@@ -88,6 +98,7 @@ def extract_and_download(url, media_type):
         stdout_buffer.close()
         stderr_buffer.close()
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         result = {'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}
@@ -100,3 +111,4 @@ if __name__ == "__main__":
     
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
+
