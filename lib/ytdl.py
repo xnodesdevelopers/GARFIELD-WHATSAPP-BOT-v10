@@ -3,8 +3,9 @@ import yt_dlp
 import json
 import sys
 import os
+import subprocess
 
-# Define cookies file path within Python
+# Define paths
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
@@ -12,10 +13,19 @@ def export_cookies_from_browser():
     """Export cookies from browser if needed."""
     try:
         print("Exporting fresh cookies from browser...")
-        os.system(f"python3 -m yt_dlp --cookies-from-browser chrome --output-cookies {COOKIES_FILE}")
+        # Use yt-dlp to export cookies directly to COOKIES_FILE
+        subprocess.run(
+            ['yt-dlp', '--cookies-from-browser', 'chrome', '--output', COOKIES_FILE],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
         return os.path.exists(COOKIES_FILE)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to export cookies: {e.stderr.decode()}")
+        return False
     except Exception as e:
-        print(f"Failed to export cookies: {str(e)}")
+        print(f"Unexpected error during cookie export: {str(e)}")
         return False
 
 def extract_and_download(url, media_type, quality, store_dir=STORE_DIR):
@@ -40,7 +50,7 @@ def extract_and_download(url, media_type, quality, store_dir=STORE_DIR):
         if export_cookies_from_browser():
             ydl_opts['cookiefile'] = COOKIES_FILE
         else:
-            print("Warning: No cookies available!")
+            print("Warning: No cookies available! Proceeding without cookies.")
 
     # Configure format based on media type
     if media_type == 'video':
@@ -101,6 +111,8 @@ def extract_and_download(url, media_type, quality, store_dir=STORE_DIR):
                         'thumbnail': info.get('thumbnail', ''),
                         'uploader': info.get('uploader', 'Unknown')
                     }
+            else:
+                print("Failed to refresh cookies, proceeding without authentication.")
         return {
             'success': False,
             'error': f"Error: {str(e)}",
