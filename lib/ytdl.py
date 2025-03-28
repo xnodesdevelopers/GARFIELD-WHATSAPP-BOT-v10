@@ -32,7 +32,7 @@ def download_media(url, media_type, store_dir, cookies_file=None):
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'm4a',
-                    'preferredquality': '192',
+                    'preferredquality': '128',
                 }],
                 'extractaudio': True,
             })
