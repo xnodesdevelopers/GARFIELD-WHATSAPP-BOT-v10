@@ -4,21 +4,43 @@ import json
 import sys
 import os
 
-def extract_and_download(url, media_type, quality, store_dir, cookies_file=None):
+# Define cookies file path within Python
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
+
+def export_cookies_from_browser():
+    """Export cookies from browser if needed."""
+    try:
+        print("Exporting fresh cookies from browser...")
+        os.system(f"python3 -m yt_dlp --cookies-from-browser chrome --output-cookies {COOKIES_FILE}")
+        return os.path.exists(COOKIES_FILE)
+    except Exception as e:
+        print(f"Failed to export cookies: {str(e)}")
+        return False
+
+def extract_and_download(url, media_type, quality, store_dir=STORE_DIR):
     """Extract video info and download media with cookies support."""
     ydl_opts = {
         'outtmpl': os.path.join(store_dir, '%(id)s.%(ext)s'),
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,
+        'no_warnings': False,
         'noplaylist': True,
         'nocheckcertificate': True,
         'socket_timeout': 30,
         'retries': 3,
+        'verbose': True,
     }
 
-    # Add cookies if file exists
-    if cookies_file and os.path.exists(cookies_file):
-        ydl_opts['cookiefile'] = cookies_file
+    # Handle cookies
+    if os.path.exists(COOKIES_FILE):
+        ydl_opts['cookiefile'] = COOKIES_FILE
+        print(f"Using cookies from: {COOKIES_FILE}")
+    else:
+        print("Cookies file not found, attempting to export...")
+        if export_cookies_from_browser():
+            ydl_opts['cookiefile'] = COOKIES_FILE
+        else:
+            print("Warning: No cookies available!")
 
     # Configure format based on media type
     if media_type == 'video':
@@ -63,6 +85,22 @@ def extract_and_download(url, media_type, quality, store_dir, cookies_file=None)
                 'uploader': info.get('uploader', 'Unknown')
             }
     except Exception as e:
+        if "Sign in to confirm" in str(e):
+            print("Bot verification detected, refreshing cookies...")
+            if export_cookies_from_browser():
+                ydl_opts['cookiefile'] = COOKIES_FILE
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    ydl.download([url])
+                    filename = ydl.prepare_filename(info)
+                    return {
+                        'success': True,
+                        'filename': os.path.abspath(filename),
+                        'title': info.get('title', 'Unknown'),
+                        'duration': info.get('duration', 0),
+                        'thumbnail': info.get('thumbnail', ''),
+                        'uploader': info.get('uploader', 'Unknown')
+                    }
         return {
             'success': False,
             'error': f"Error: {str(e)}",
@@ -70,18 +108,20 @@ def extract_and_download(url, media_type, quality, store_dir, cookies_file=None)
         }
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5 or len(sys.argv) > 6:
+    if len(sys.argv) != 4:
         print(json.dumps({
             'success': False,
-            'error': 'Usage: python ytdl.py <url> <media_type> <quality> <store_dir> [cookies_file]'
+            'error': 'Usage: python ytdl.py <url> <media_type> <quality>'
         }))
         sys.exit(1)
 
     url = sys.argv[1]
     media_type = sys.argv[2]
     quality = sys.argv[3]
-    store_dir = sys.argv[4]
-    cookies_file = sys.argv[5] if len(sys.argv) == 6 else None
 
-    result = extract_and_download(url, media_type, quality, store_dir, cookies_file)
+    # Ensure store directory exists
+    if not os.path.exists(STORE_DIR):
+        os.makedirs(STORE_DIR, exist_ok=True)
+
+    result = extract_and_download(url, media_type, quality)
     print(json.dumps(result))
