@@ -1,1 +1,35 @@
-import yt_dlp,json,sys,os,subprocess,from contextlib import redirect_stdout,redirect_stderr,from io import StringIO,COOKIES_FILE=os.path.join(os.path.dirname(__file__),'cookies.txt'),STORE_DIR=os.path.join(os.path.dirname(__file__),'store'),def extract_and_download(url,media_type):ydl_opts={'outtmpl':os.path.join(STORE_DIR,'%&#40;id&#41;s.%&#40;ext&#41;s'),'quiet':True,'no_warnings':True,'nocheckcertificate':True,'retries':2,'progress':False,'extract_flat':False}if os.path.exists(COOKIES_FILE):ydl_opts['cookiefile']=COOKIES_FILE;if media_type=='audio':ydl_opts['format']='bestaudio/best'ydl_opts['postprocessors']=[{'key':'FFmpegExtractAudio','preferredcodec':'m4a',}]ydl_opts['socket_timeout']=None;ydl_opts['extractor_args']={'youtube':{'skip':['dash','hls']}}else:ydl_opts['format']='bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]'ydl_opts['merge_output_format']='mp4'ydl_opts['postprocessors']=[{'key':'FFmpegVideoRemuxer','preferedformat':'mp4'}]stdout_buffer=StringIO()stderr_buffer=StringIO()try:with redirect_stdout(stdout_buffer),redirect_stderr(stderr_buffer):with yt_dlp.YoutubeDL(ydl_opts) as ydl:ydl.params['check_formats']=Falseinfo=ydl.extract_info(url,download=True)if not info or'title'not in info:raise ValueError('Failed to extract metadata')if media_type=='audio':filename=ydl.prepare_filename(info)base,ext=os.path.splitext(filename);filename=f'{base}.m4a'else:filename=ydl.prepare_filename(info)if not filename.endswith('.mp4'):base,_=os.path.splitext(filename);filename=f'{base}.mp4'return{'success':True,'filename':os.path.abspath(filename),'title':info.get('title','Unknown'),'duration':info.get('duration',0)}except Exception as e:return{'success':False,'error':f'Error:{str(e)'}finally:stdout_buffer.close();stderr_buffer.close()if __name__=='__main__':if len(sys.argv)!=3:result={'success':False,'error':'Usage:python ytdl.py <url> <media_type>'}else:url=sys.argv[1];media_type=sys.argv[2]if not os.path.exists(STORE_DIR):os.makedirs(STORE_DIR,exist_ok=True)result=extract_and_download(url,media_type)sys.stdout.write(json.dumps(result));sys.stdout.flush()
+#!/usr/bin/env python3
+N='error'
+I='success'
+F=False
+D=True
+import yt_dlp as X,json,sys as B,os as A,subprocess
+from contextlib import redirect_stdout as Y,redirect_stderr as Z
+from io import StringIO as L
+M=A.path.join(A.path.dirname(__file__),'cookies.txt')
+H=A.path.join(A.path.dirname(__file__),'store')
+def E(url,media_type):
+	W='duration';V='mp4';U='key';T='postprocessors';S='format';R='audio';O=media_type;K='title';B={'outtmpl':A.path.join(H,'%(id)s.%(ext)s'),'quiet':D,'no_warnings':D,'nocheckcertificate':D,'retries':2,'progress':F,'extract_flat':F}
+	if A.path.exists(M):B['cookiefile']=M
+	if O==R:B[S]='bestaudio/best';B[T]=[{U:'FFmpegExtractAudio','preferredcodec':'m4a'}];B['socket_timeout']=None;B['extractor_args']={'youtube':{'skip':['dash','hls']}}
+	else:B[S]='bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]';B['merge_output_format']=V;B[T]=[{U:'FFmpegVideoRemuxer','preferedformat':V}]
+	P=L();Q=L()
+	try:
+		with Y(P),Z(Q):
+			with X.YoutubeDL(B)as G:
+				G.params['check_formats']=F;E=G.extract_info(url,download=D)
+				if not E or K not in E:raise ValueError('Failed to extract metadata')
+				if O==R:C=G.prepare_filename(E);J,b=A.path.splitext(C);C=f"{J}.m4a"
+				else:
+					C=G.prepare_filename(E)
+					if not C.endswith('.mp4'):J,c=A.path.splitext(C);C=f"{J}.mp4"
+				return{I:D,'filename':A.path.abspath(C),K:E.get(K,'Unknown'),W:E.get(W,0)}
+	except Exception as a:return{I:F,N:f"Error: {str(a)}"}
+	finally:P.close();Q.close()
+if __name__=='__main__':
+	if len(B.argv)!=3:C={I:F,N:'Usage: python ytdl.py <url> <media_type>'}
+	else:
+		G=B.argv[1];J=B.argv[2]
+		if not A.path.exists(H):A.makedirs(H,exist_ok=D)
+		C=E(G,J)
+	B.stdout.write(json.dumps(C));B.stdout.flush()
