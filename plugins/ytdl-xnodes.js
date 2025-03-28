@@ -16,7 +16,12 @@ const downloadMedia = async (url, type) => {
         const args = [PYTHON_SCRIPT, url, type];
         const result = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
         console.log(`Raw Python output: ${result}`); // Debug
-        return JSON.parse(result);
+        try {
+            return JSON.parse(result);
+        } catch (jsonError) {
+            console.error(`JSON parse error: ${jsonError.message}`);
+            return { success: false, error: `Invalid JSON: ${result}` };
+        }
     } catch (e) {
         console.error('Python execution error:', e);
         return { success: false, error: `Python execution failed: ${e.message}` };
