@@ -59,23 +59,21 @@ cmd(
             const input = args.join(' ').trim();
             if (!input) return reply("Provide search query or YouTube URL");
 
-            // Get video info in parallel with loading message
-            const [loadingMsg, video] = await Promise.all([
-                
-                (async () => {
-                    if (input.match(/youtu\.?be/)) {
-                        const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                        if (!videoId) throw new Error("Invalid URL");
-                        return { id: videoId };
-                    } else {
-                        const results = await playdl.search(input, { limit: 1 });
-                        if (!results.length) throw new Error("No results found");
-                        return results[0];
-                    }
-                })()
-            ]);
+            let videoInfo;
+            if (input.match(/youtu\.?be/)) {
+                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                if (!videoId) return reply("Invalid URL");
+                videoInfo = await playdl.video_info(`https://youtu.be/${videoId}`);
+            } else {
+                const results = await playdl.search(input, { limit: 1 });
+                if (!results.length) return reply("No results found");
+                videoInfo = await playdl.video_info(results[0].url);
+            }
 
-            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'audio');
+            const video = videoInfo.video_details;
+            const loadingMsg = await reply("⬇️ Downloading audio...");
+
+            const result = await downloadMedia(video.url, 'audio');
             
             if (!result.success) {
                 await conn.sendMessage(from, { 
@@ -131,23 +129,21 @@ cmd(
             const input = args.join(' ').trim();
             if (!input) return reply("Provide search query or YouTube URL");
 
-            // Get video info in parallel with loading message
-            const [loadingMsg, video] = await Promise.all([
-                
-                (async () => {
-                    if (input.match(/youtu\.?be/)) {
-                        const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                        if (!videoId) throw new Error("Invalid URL");
-                        return { id: videoId };
-                    } else {
-                        const results = await playdl.search(input, { limit: 1 });
-                        if (!results.length) throw new Error("No results found");
-                        return results[0];
-                    }
-                })()
-            ]);
+            let videoInfo;
+            if (input.match(/youtu\.?be/)) {
+                const videoId = input.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                if (!videoId) return reply("Invalid URL");
+                videoInfo = await playdl.video_info(`https://youtu.be/${videoId}`);
+            } else {
+                const results = await playdl.search(input, { limit: 1 });
+                if (!results.length) return reply("No results found");
+                videoInfo = await playdl.video_info(results[0].url);
+            }
 
-            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'video');
+            const video = videoInfo.video_details;
+            const loadingMsg = await reply("⬇️ Downloading video...");
+
+            const result = await downloadMedia(video.url, 'video');
             
             if (!result.success) {
                 await conn.sendMessage(from, { 
