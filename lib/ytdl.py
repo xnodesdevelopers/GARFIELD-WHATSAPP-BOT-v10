@@ -36,7 +36,7 @@ def extract_and_download(url, media_type):
         
         # Remove all timeout limits for maximum speed
         ydl_opts['socket_timeout'] = None
-        ydl_opts['extractor_args': {'youtube': {'skip': ['dash', 'hls']}}
+        ydl_opts['extractor_args'] = {'youtube': {'skip': ['dash', 'hls']}}
     else:  # video
         # Video settings remain unchanged
         ydl_opts['format'] = 'bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]'
