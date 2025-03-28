@@ -55,7 +55,7 @@ const searchVideo = async (query) => {
 cmd({
     pattern: "song",
     react: "🎶",
-    desc: "Download YouTube audio (fast, from low-quality video)",
+    desc: "Download YouTube audio (fast and playable)",
     category: "main",
     use: ".song <query>",
     filename: __filename
@@ -67,7 +67,7 @@ cmd({
         const video = await searchVideo(query);
         if (!video) return reply("No results found");
 
-        await reply(`⬇️ Downloading audio: ${video.title} (fast)`);
+        await reply(`⬇️ Downloading audio: ${video.title}`);
 
         const result = await downloadMedia(`https://youtu.be/${video.id}`, 'audio');
 
