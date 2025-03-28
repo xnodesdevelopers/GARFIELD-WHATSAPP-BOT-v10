@@ -3,18 +3,21 @@ import yt_dlp
 import json
 import sys
 import os
+from contextlib import redirect_stdout, redirect_stderr
+from io import StringIO
 
 # Define paths
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def extract_and_download(url, media_type):
-    """Simple and stable audio or video download."""
+    """Simple and stable audio or video download with clean JSON output."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'progress': False,
     }
 
     # Use cookies if available
@@ -36,30 +39,37 @@ def extract_and_download(url, media_type):
             'preferedformat': 'mp4',
         }]
 
+    # Suppress all yt-dlp output
+    stdout_buffer = StringIO()
+    stderr_buffer = StringIO()
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if not info or 'title' not in info:
-                raise ValueError("Failed to extract metadata")
+        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if not info or 'title' not in info:
+                    raise ValueError("Failed to extract metadata")
 
-            ydl.download([url])
-            filename = ydl.prepare_filename(info)
-            ext = '.mp4' if media_type == 'video' else '.m4a'
-            if not filename.endswith(ext):
-                base, _ = os.path.splitext(filename)
-                filename = f"{base}{ext}"
+                ydl.download([url])
+                filename = ydl.prepare_filename(info)
+                ext = '.mp4' if media_type == 'video' else '.m4a'
+                if not filename.endswith(ext):
+                    base, _ = os.path.splitext(filename)
+                    filename = f"{base}{ext}"
 
-            return {
-                'success': True,
-                'filename': os.path.abspath(filename),
-                'title': info.get('title', 'Unknown'),
-                'duration': info.get('duration', 0)
-            }
+                return {
+                    'success': True,
+                    'filename': os.path.abspath(filename),
+                    'title': info.get('title', 'Unknown'),
+                    'duration': info.get('duration', 0)
+                }
     except Exception as e:
         return {
             'success': False,
             'error': f"Error: {str(e)}"
         }
+    finally:
+        stdout_buffer.close()
+        stderr_buffer.close()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
