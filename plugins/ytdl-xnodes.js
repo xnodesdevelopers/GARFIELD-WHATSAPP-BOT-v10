@@ -55,7 +55,7 @@ const searchVideo = async (query) => {
 cmd({
     pattern: "song",
     react: "🎶",
-    desc: "Download YouTube audio (fast and playable)",
+    desc: "Download YouTube audio as m4a",
     category: "main",
     use: ".song <query>",
     filename: __filename
@@ -98,7 +98,7 @@ cmd({
 cmd({
     pattern: "video",
     react: "🎥",
-    desc: "Download YouTube video (360p highest quality)",
+    desc: "Download YouTube video as 360p mp4",
     category: "main",
     use: ".video <query>",
     filename: __filename
