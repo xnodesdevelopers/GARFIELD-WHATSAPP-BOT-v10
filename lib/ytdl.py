@@ -3,15 +3,13 @@ import yt_dlp
 import json
 import sys
 import os
-from contextlib import redirect_stdout, redirect_stderr
-from io import StringIO
 
 # Define paths
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def extract_and_download(url, media_type):
-    """Fast audio or video download with strict JSON output."""
+    """Ultra-fast audio or video download without encoding."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
@@ -19,59 +17,45 @@ def extract_and_download(url, media_type):
         'nocheckcertificate': True,
         'socket_timeout': 10,
         'retries': 2,
-        'progress_hooks': [lambda d: None],  # Suppress progress output
+        'format': 'bestaudio/best' if media_type == 'audio' else 'bestvideo[height<=360]+bestaudio/best[height<=360]/best',
     }
 
     # Use cookies if available
     if os.path.exists(COOKIES_FILE):
         ydl_opts['cookiefile'] = COOKIES_FILE
 
-    # Configure based on media type
+    # Video-specific settings
     if media_type == 'video':
-        ydl_opts['format'] = 'bestvideo[height<=360]+bestaudio/best[height<=360]/best'
         ydl_opts['postprocessors'] = [{
             'key': 'FFmpegVideoRemuxer',
             'preferedformat': 'mp4'
         }]
-    else:  # audio
-        ydl_opts['format'] = 'bestaudio/best'
-        ydl_opts['postprocessors'] = [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-            'preferredquality': '128'
-        }]
 
-    # Capture all yt-dlp output
-    stdout_buffer = StringIO()
-    stderr_buffer = StringIO()
+    # Capture output (minimal)
     try:
-        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                if not info or 'title' not in info:
-                    raise ValueError("Failed to extract metadata")
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            if not info or 'title' not in info:
+                raise ValueError("Failed to extract metadata")
 
-                ydl.download([url])
-                filename = ydl.prepare_filename(info)
-                ext = '.mp4' if media_type == 'video' else '.m4a'
-                if not filename.endswith(ext):
-                    base, _ = os.path.splitext(filename)
-                    filename = f"{base}{ext}"
+            ydl.download([url])
+            filename = ydl.prepare_filename(info)
+            ext = '.mp4' if media_type == 'video' else info.get('ext', 'm4a')  # Use native extension for audio
+            if not filename.endswith(ext):
+                base, _ = os.path.splitext(filename)
+                filename = f"{base}.{ext}"
 
-                return {
-                    'success': True,
-                    'filename': os.path.abspath(filename),
-                    'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0)
-                }
+            return {
+                'success': True,
+                'filename': os.path.abspath(filename),
+                'title': info.get('title', 'Unknown'),
+                'duration': info.get('duration', 0)
+            }
     except Exception as e:
         return {
             'success': False,
             'error': f"Error: {str(e)}"
         }
-    finally:
-        stdout_buffer.close()
-        stderr_buffer.close()
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -83,6 +67,5 @@ if __name__ == "__main__":
             os.makedirs(STORE_DIR, exist_ok=True)
         result = extract_and_download(url, media_type)
     
-    # Ensure only JSON is printed to stdout
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
