@@ -5,27 +5,16 @@ const path = require('path');
 const playdl = require("play-dl");
 
 // Configuration
-
-const STORE_DIR = path.join(__dirname, "../lib/store");
 const PYTHON_PATH = process.platform === 'win32' ? 'python' : 'python3';
 const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdl.py");
-const COOKIES_FILE = path.join(__dirname, "../lib/cookies.txt");
-
 
 // Helper functions
 const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
 
 const downloadMedia = async (url, type, quality) => {
     try {
-        const args = [PYTHON_SCRIPT, url, type, quality, STORE_DIR];
-        if (fs.existsSync(COOKIES_FILE)) {
-            args.push(COOKIES_FILE);
-        }
-        const result = execFileSync(
-            PYTHON_PATH,
-            args,
-            { maxBuffer: 50 * 1024 * 1024 }
-        ).toString();
+        const args = [PYTHON_SCRIPT, url, type, quality];
+        const result = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString();
         return JSON.parse(result);
     } catch (e) {
         console.error('Python execution error:', e);
@@ -60,18 +49,17 @@ cmd(
 
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
-      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
+
+            const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
       await conn.sendMessage(from, {
         image: { url: video.thumbnails[0].url }, // Send video thumbnail
         caption: ytmsg, // Send video details
       });
-
-
-
+    
             const result = await downloadMedia(
                 `https://youtu.be/${video.id}`,
                 'audio',
-                '360' // Quality not used for audio
+                '360'
             );
 
             if (!result.success) {
@@ -120,7 +108,7 @@ cmd(
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
 
-      const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
+            await reply(`⬇️ Downloading video: ${video.title} (360p)`);
 
             const result = await downloadMedia(
                 `https://youtu.be/${video.id}`,
@@ -137,12 +125,14 @@ cmd(
                 fs.unlinkSync(result.filename);
                 return reply("❌ Downloaded file is empty");
             }
+                  const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
+
 
             await conn.sendMessage(
                 from,
                 {
                     video: fs.readFileSync(result.filename),
-                    caption: ytmsg,
+                    caption: ytmsg ,
                     mimetype: 'video/mp4'
                 },
                 { quoted: mek }
@@ -155,16 +145,5 @@ cmd(
         }
     }
 );
-
-// Cleanup handler
-process.on('exit', () => {
-    try {
-        if (fs.existsSync(STORE_DIR)) {
-            fs.rmSync(STORE_DIR, { recursive: true, force: true });
-        }
-    } catch (err) {
-        console.error(`Failed to remove store directory: ${err.message}`);
-    }
-});
 
 module.exports = { downloadMedia, searchVideo };
