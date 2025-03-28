@@ -16,12 +16,15 @@ const downloadMedia = async (url, type) => {
         const args = [PYTHON_SCRIPT, url, type];
         const rawOutput = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
         console.log(`Raw Python output: ${rawOutput}`); // Debug
+
+        let result;
         try {
-            return JSON.parse(rawOutput);
+            result = JSON.parse(rawOutput);
         } catch (jsonError) {
             console.error(`JSON parse error: ${jsonError.message}`);
             const possibleFile = rawOutput.match(/\/root\/GARFIELD-WHATSAPP-BOT-v10\/lib\/store\/[^\s]+\.(m4a|mp4)/)?.[0];
             if (possibleFile && fs.existsSync(possibleFile)) {
+                console.log(`File found despite JSON error: ${possibleFile}`);
                 return {
                     success: true,
                     filename: possibleFile,
@@ -29,8 +32,9 @@ const downloadMedia = async (url, type) => {
                     duration: 0
                 };
             }
-            return { success: false, error: `Invalid JSON: ${rawOutput}` };
+            return { success: false, error: `Invalid JSON output: ${rawOutput}` };
         }
+        return result;
     } catch (e) {
         console.error('Python execution error:', e);
         return { success: false, error: `Python execution failed: ${e.message}` };
@@ -51,7 +55,7 @@ const searchVideo = async (query) => {
 cmd({
     pattern: "song",
     react: "🎶",
-    desc: "Download YouTube audio (fast, no encoding)",
+    desc: "Download YouTube audio (fast, from low-quality video)",
     category: "main",
     use: ".song <query>",
     filename: __filename
