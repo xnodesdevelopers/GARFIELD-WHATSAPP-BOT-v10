@@ -11,24 +11,15 @@ const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdl.py");
 // Helper functions
 const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-const downloadMedia = async (url, type, quality) => {
+const downloadMedia = async (url, type) => {
     try {
-        const args = [PYTHON_SCRIPT, url, type, quality];
+        const args = [PYTHON_SCRIPT, url, type];
         const result = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
         console.log(`Raw Python output: ${result}`); // Debug
-        try {
-            return JSON.parse(result);
-        } catch (jsonError) {
-            console.error(`JSON parse error: ${jsonError.message}`);
-            return {
-                success: false,
-                error: `Invalid JSON output from Python script: ${result}`,
-                type: 'json_parse_error'
-            };
-        }
+        return JSON.parse(result);
     } catch (e) {
         console.error('Python execution error:', e);
-        return { success: false, error: `Python execution failed: ${e.message}`, type: 'execution_error' };
+        return { success: false, error: `Python execution failed: ${e.message}` };
     }
 };
 
@@ -62,11 +53,7 @@ cmd(
 
             await reply(`⬇️ Downloading audio: ${video.title} (128kbps M4A)`);
 
-            const result = await downloadMedia(
-                `https://youtu.be/${video.id}`,
-                'audio',
-                '360'
-            );
+            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'audio');
 
             if (!result.success) {
                 return reply(`❌ Download failed: ${result.error}`);
@@ -101,7 +88,7 @@ cmd(
     {
         pattern: "video",
         react: "🎥",
-        desc: "Download YouTube video (360p)",
+        desc: "Download YouTube video (360p highest quality)",
         category: "main",
         use: ".video <query>",
         filename: __filename
@@ -116,11 +103,7 @@ cmd(
 
             await reply(`⬇️ Downloading video: ${video.title} (360p)`);
 
-            const result = await downloadMedia(
-                `https://youtu.be/${video.id}`,
-                'video',
-                '360'
-            );
+            const result = await downloadMedia(`https://youtu.be/${video.id}`, 'video');
 
             if (!result.success) {
                 return reply(`❌ Download failed: ${result.error}`);
