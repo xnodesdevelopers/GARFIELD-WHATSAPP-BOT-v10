@@ -8,18 +8,25 @@ const playdl = require("play-dl");
 const STORE_DIR = path.join(__dirname, "../lib/store");
 const PYTHON_PATH = process.platform === 'win32' ? 'python' : 'python3';
 const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdl.py");
+const COOKIES_FILE = path.join(__dirname, "../lib/cookies.txt");
 
-// Ensure store directory exists
+// Ensure directories exist
 if (!fs.existsSync(STORE_DIR)) {
     fs.mkdirSync(STORE_DIR, { recursive: true });
 }
 
-const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 64);
 
 const downloadMedia = (url, type) => {
     return new Promise((resolve) => {
+        let command = `"${PYTHON_PATH}" "${PYTHON_SCRIPT}" "${url}" "${type}" "${STORE_DIR}"`;
+        
+        if (fs.existsSync(COOKIES_FILE)) {
+            command += ` "${COOKIES_FILE}"`;
+        }
+
         exec(
-            `"${PYTHON_PATH}" "${PYTHON_SCRIPT}" "${url}" "${type}" "${STORE_DIR}"`,
+            command,
             { maxBuffer: 100 * 1024 * 1024 },
             (error, stdout, stderr) => {
                 if (error) {
@@ -32,7 +39,9 @@ const downloadMedia = (url, type) => {
                 }
 
                 try {
-                    resolve(JSON.parse(stdout));
+                    const result = JSON.parse(stdout);
+                    result.filename = path.resolve(result.filename);
+                    resolve(result);
                 } catch (e) {
                     resolve({
                         success: false,
@@ -71,27 +80,17 @@ cmd(
             }
 
             const video = videoInfo.video_details;
-            const loadingMsg = await reply("⬇️ Downloading audio...");
-
             const result = await downloadMedia(video.url, 'audio');
             
-            if (!result.success) {
-                await conn.sendMessage(from, { 
-                    text: `❌ Failed: ${result.error}`,
-                    delete: loadingMsg.key
-                }, { quoted: mek });
-                return;
-            }
+            if (!result.success) return reply(`❌ Failed: ${result.error}`);
 
             const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
             
-            // Send thumbnail and details first
             await conn.sendMessage(from, {
                 image: { url: video.thumbnails[0].url },
                 caption: ytmsg
             });
 
-            // Send audio file
             await conn.sendMessage(
                 from,
                 {
@@ -102,11 +101,7 @@ cmd(
                 { quoted: mek }
             );
 
-            // Clean up
             fs.unlinkSync(result.filename);
-            await conn.sendMessage(from, { 
-                delete: loadingMsg.key 
-            });
 
         } catch (e) {
             console.error(e);
@@ -141,21 +136,12 @@ cmd(
             }
 
             const video = videoInfo.video_details;
-            const loadingMsg = await reply("⬇️ Downloading video...");
-
             const result = await downloadMedia(video.url, 'video');
             
-            if (!result.success) {
-                await conn.sendMessage(from, { 
-                    text: `❌ Failed: ${result.error}`,
-                    delete: loadingMsg.key
-                }, { quoted: mek });
-                return;
-            }
+            if (!result.success) return reply(`❌ Failed: ${result.error}`);
 
             const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
             
-            // Send video with caption
             await conn.sendMessage(
                 from,
                 {
@@ -166,11 +152,7 @@ cmd(
                 { quoted: mek }
             );
 
-            // Clean up
             fs.unlinkSync(result.filename);
-            await conn.sendMessage(from, { 
-                delete: loadingMsg.key 
-            });
 
         } catch (e) {
             console.error(e);
