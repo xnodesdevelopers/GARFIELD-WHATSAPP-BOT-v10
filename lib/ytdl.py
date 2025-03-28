@@ -11,14 +11,15 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def extract_and_download(url, media_type):
-    """Fast audio or video download with minimal overhead."""
+    """Fast audio or video download with strict JSON output."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
-        'no_warnings': True,  # Suppress warnings
+        'no_warnings': True,
         'nocheckcertificate': True,
         'socket_timeout': 10,
         'retries': 2,
+        'progress_hooks': [lambda d: None],  # Suppress progress output
     }
 
     # Use cookies if available
@@ -40,18 +41,16 @@ def extract_and_download(url, media_type):
             'preferredquality': '128'
         }]
 
-    # Suppress all output from yt-dlp
+    # Capture all yt-dlp output
     stdout_buffer = StringIO()
     stderr_buffer = StringIO()
     try:
         with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Extract minimal info
                 info = ydl.extract_info(url, download=False)
                 if not info or 'title' not in info:
                     raise ValueError("Failed to extract metadata")
 
-                # Download and process
                 ydl.download([url])
                 filename = ydl.prepare_filename(info)
                 ext = '.mp4' if media_type == 'video' else '.m4a'
@@ -76,15 +75,14 @@ def extract_and_download(url, media_type):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print(json.dumps({'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}))
-        sys.exit(1)
-
-    url = sys.argv[1]
-    media_type = sys.argv[2]
-
-    # Ensure store directory exists
-    if not os.path.exists(STORE_DIR):
-        os.makedirs(STORE_DIR, exist_ok=True)
-
-    result = extract_and_download(url, media_type)
-    print(json.dumps(result))
+        result = {'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}
+    else:
+        url = sys.argv[1]
+        media_type = sys.argv[2]
+        if not os.path.exists(STORE_DIR):
+            os.makedirs(STORE_DIR, exist_ok=True)
+        result = extract_and_download(url, media_type)
+    
+    # Ensure only JSON is printed to stdout
+    sys.stdout.write(json.dumps(result))
+    sys.stdout.flush()
