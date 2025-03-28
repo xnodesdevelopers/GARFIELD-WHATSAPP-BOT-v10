@@ -14,11 +14,21 @@ const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
 const downloadMedia = async (url, type, quality) => {
     try {
         const args = [PYTHON_SCRIPT, url, type, quality];
-        const result = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString();
-        return JSON.parse(result);
+        const result = execFileSync(PYTHON_PATH, args, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
+        console.log(`Raw Python output: ${result}`); // Debug
+        try {
+            return JSON.parse(result);
+        } catch (jsonError) {
+            console.error(`JSON parse error: ${jsonError.message}`);
+            return {
+                success: false,
+                error: `Invalid JSON output from Python script: ${result}`,
+                type: 'json_parse_error'
+            };
+        }
     } catch (e) {
         console.error('Python execution error:', e);
-        return { success: false, error: e.message };
+        return { success: false, error: `Python execution failed: ${e.message}`, type: 'execution_error' };
     }
 };
 
@@ -50,12 +60,8 @@ cmd(
             const video = await searchVideo(query);
             if (!video) return reply("No results found");
 
-            const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
-      await conn.sendMessage(from, {
-        image: { url: video.thumbnails[0].url }, // Send video thumbnail
-        caption: ytmsg, // Send video details
-      });
-    
+            await reply(`⬇️ Downloading audio: ${video.title} (128kbps M4A)`);
+
             const result = await downloadMedia(
                 `https://youtu.be/${video.id}`,
                 'audio',
@@ -125,14 +131,12 @@ cmd(
                 fs.unlinkSync(result.filename);
                 return reply("❌ Downloaded file is empty");
             }
-                  const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
-
 
             await conn.sendMessage(
                 from,
                 {
                     video: fs.readFileSync(result.filename),
-                    caption: ytmsg ,
+                    caption: `*${video.title}* - 360p Quality`,
                     mimetype: 'video/mp4'
                 },
                 { quoted: mek }
