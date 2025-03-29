@@ -1,7 +1,131 @@
-const{cmd:e}=require("../command"),{execFileSync:r}=require("child_process"),fs=require("fs"),path=require("path"),playdl=require("play-dl"),PYTHON_PATH="win32"===process.platform?"python":"python3",PYTHON_SCRIPT=path.join(__dirname,"../lib/ytdl.py"),cleanFilename=e=>e.replace(/[^a-zA-Z0-9_-]/g,"_"),downloadMedia=async(e,a)=>{try{let t=[PYTHON_SCRIPT,e,a],i=r(PYTHON_PATH,t,{maxBuffer:52428800}).toString().trim();console.log(`Raw Python output: ${i}`);let n;try{n=JSON.parse(i)}catch(o){console.error(`JSON parse error: ${o.message}`);let s=i.match(/\/root\/GARFIELD-WHATSAPP-BOT-v10\/lib\/store\/[^\s]+\.(m4a|mp4)/)?.[0];if(s&&fs.existsSync(s))return console.log(`File found despite JSON error: ${s}`),{success:!0,filename:s,title:"Unknown (JSON parse failed)",duration:0};return{success:!1,error:`Invalid JSON output: ${i}`}}return n}catch(l){return console.error("Python execution error:",l),{success:!1,error:`Python execution failed: ${l.message}`}}},searchVideo=async e=>{try{let r=await playdl.search(e,{limit:5});return r[0]}catch(a){return console.error("Search error:",a),null}};e({pattern:"play",react:"\uD83C\uDFB6",desc:"Download YouTube audio as m4a",category:"main",use:".song <query>",filename:__filename},async(e,r,a,{from:t,args:i,reply:n})=>{try{let o=i.join(" ");if(!o)return n("Please provide a search query");let s=await searchVideo(o);if(!s)return n("No results found");await n(`_Downloading...._
-*${s.title}* 
-High Quality From Using *Youtube Music*`);let l=await downloadMedia(`https://youtu.be/${s.id}`,"audio");if(!l.success)return n(`❌ Download failed: ${l.error}`);let d=fs.statSync(l.filename);if(0===d.size)return fs.unlinkSync(l.filename),n("❌ Downloaded file is empty");await e.sendMessage(t,{document:fs.readFileSync(l.filename),mimetype:"audio/mp4",fileName:`${s.title}.m4a`},{quoted:r}),fs.unlinkSync(l.filename)}catch(c){console.error(c),n("❌ An error occurred while processing the audio")}}),e({pattern:"ytmp4",react:"\uD83C\uDFA5",desc:"Download YouTube video as 360p mp4",category:"main",use:".video <query>",filename:__filename},async(e,r,a,{from:t,args:i,reply:n})=>{try{let o=i.join(" ");if(!o)return n("Please provide a search query");let s=await searchVideo(o);if(!s)return n("No results found");let l=`*🎬 Video Title* - ${s.title}
-*🕜 Duration* - ${s.durationRaw}
-*👁️ Views* - ${s.views?.toLocaleString()||"N/A"}
-*👤 Author* - ${s.channel?.name||"Unknown"}
-`,d=await downloadMedia(`https://youtu.be/${s.id}`,"video");if(!d.success)return n(`❌ Download failed: ${d.error}`);let c=fs.statSync(d.filename);if(0===c.size)return fs.unlinkSync(d.filename),n("❌ Downloaded file is empty");await e.sendMessage(t,{video:fs.readFileSync(d.filename),caption:l,mimetype:"video/mp4"},{quoted:r}),fs.unlinkSync(d.filename)}catch(u){console.error(u),n("❌ An error occurred while processing the video")}}),module.exports={downloadMedia,searchVideo};
+const { cmd } = require("../command");
+const fs = require('fs').promises; // Use promises for async I/O
+const path = require('path');
+const playdl = require("play-dl");
+
+const { downloadVideo } = require('../../yt.node');
+
+const cleanFilename = (str) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+const YOUTUBE_COOKIES = "YSC=y3J2I4ug7_Y; GPS=1; __Secure-ROLLOUT_TOKEN=CMjptNCdkZS38wEQ3qrKy42sjAMY6rHWzI2sjAM%3D; VISITOR_INFO1_LIVE=23fLZJsdyko; VISITOR_PRIVACY_METADATA=CgJTRxIEGgAgYg%3D%3D; PREF=tz=Asia.Colombo; __Secure-1PSIDTS=sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA; __Secure-3PSIDTS=sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA; HSID=Aniy9moFdgwAbwxhX; SSID=AOg1LQ_s6ntw10z_Z; APISID=CvDxwK2BItUN-tzF/AuAXNKzT-xawmDzkr; SAPISID=0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D; __Secure-1PAPISID=0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D; __Secure-3PAPISID=0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D; SID=g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Spf5ujzjfbNmvHhCgoMBDrRQACgYKAfkSARASFQHGX2MiPlbWPNWVwhe6pjbzYIjwshoVAUF8yKpov3-JaFWc1qiTukHtQYzm0076; __Secure-1PSID=g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_SprZyHJbhxnN_8dLRD5XAHpgACgYKATcSARASFQHGX2MiH3bMYpm0n3Zdt8WVGOivmxoVAUF8yKpGMEJwoIRbUdZcUuFprUMq0076; __Secure-3PSID=g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Sp15ZHmt6cN6TQnilPhMWTgwACgYKATsSARASFQHGX2Mi6VpMNVdKtVF-tanfhe3aYBoVAUF8yKq0EqaR5MEyL34UgLqeT7IY0076; LOGIN_INFO=AFmmF2swRAIgBqcuJdssqOxuxg1q7aAdYMiL9t9Ty2f5Fk--YU6VPT0CIC2axghJpTkIXImas4PDBGqto0RbkXw27E6S_Xm-9nUe:QUQ3MjNmdzRkWlFveUFKb0gzUTQzZURKWlhHR3VnRko5dnYzMXk2dWM4dm9kTFhCOFhoeXVhVnFRM2tvZlA2MHJ3UHhNVWltN2JlZ3lLbTM5dG1NNVhYcWxTQXNPSXVBcGdhWFh3R3hkNWo0MzdMcUV3Qm1idFkwMTlfRWw5clRpdkVpeUtVT3dWVTR3UWxBcG1rYTZBSjlaaDkzNFRsODZ3; SIDCC=AKEyXzU2Mau8Xeyalya-QpgofKjsThOgTEBvTuDFNd7vt1NCqseBWDPxPeuBWuSr5jlTaQAswQ; __Secure-1PSIDCC=AKEyXzXEaXyQhaq-BoAMKs9wCy5uyAM4F7vCnsglk9dMUuwwu1vUUkssI4FUNTlApJUipfbW; __Secure-3PSIDCC=AKEyXzXHwKzK7RtG_H4FCMOAflpSs3DPBeq73xTvVWXmrCuTAwOXG5YCIGZbU5ERoNxlb9zh";
+
+const downloadMedia = async (url, type) => {
+    const outputPath = path.join(__dirname, '../lib/store', `${cleanFilename(url.split('v=')[1] || 'media')}.${type === 'audio' ? 'm4a' : 'mp4'}`);
+    const audioOnly = type === 'audio';
+
+    console.log(`Downloading ${type} to ${outputPath}`);
+
+    return new Promise((resolve, reject) => {
+        downloadVideo(url, outputPath, audioOnly, YOUTUBE_COOKIES, (err) => {
+            if (err) {
+                console.error('Rust download error:', err);
+                reject({ success: false, error: `Download failed: ${err.message}` });
+                return;
+            }
+
+            fs.stat(outputPath)
+                .then(stats => {
+                    if (stats.size === 0) {
+                        fs.unlink(outputPath);
+                        reject({ success: false, error: 'Downloaded file is empty' });
+                    } else {
+                        resolve({
+                            success: true,
+                            filename: outputPath,
+                            title: 'Downloaded Media',
+                            duration: 0
+                        });
+                    }
+                })
+                .catch(() => reject({ success: false, error: 'Output file not found' }));
+        });
+    });
+};
+
+const searchVideo = async (query) => {
+    try {
+        const results = await playdl.search(query, { limit: 5 });
+        return results[0];
+    } catch (e) {
+        console.error("Search error:", e);
+        return null;
+    }
+};
+
+// Song command (M4A)
+cmd({
+    pattern: "play",
+    react: "🎶",
+    desc: "Download YouTube audio as m4a",
+    category: "main",
+    use: ".song <query>",
+    filename: __filename
+}, async (conn, mek, msg, { from, args, reply }) => {
+    try {
+        const query = args.join(' ');
+        if (!query) return reply("Please provide a search query");
+
+        const video = await searchVideo(query);
+        if (!video) return reply("No results found");
+
+        await reply(`_Downloading...._
+*${video.title}* 
+High Quality From Using *Youtube Music*`);
+
+        const result = await downloadMedia(`https://youtu.be/${video.id}`, 'audio');
+
+        if (!result.success) {
+            return reply(`❌ Download failed: ${result.error}`);
+        }
+
+        await conn.sendMessage(from, {
+            document: { url: result.filename },
+            mimetype: 'audio/mp4',
+            fileName: `${video.title}.m4a`
+        }, { quoted: mek });
+
+        await fs.unlink(result.filename);
+    } catch (e) {
+        console.error(e);
+        reply("❌ An error occurred while processing the audio");
+    }
+});
+
+// Video command (360p)
+cmd({
+    pattern: "ytmp4",
+    react: "🎥",
+    desc: "Download YouTube video as 360p mp4",
+    category: "main",
+    use: ".video <query>",
+    filename: __filename
+}, async (conn, mek, msg, { from, args, reply }) => {
+    try {
+        const query = args.join(' ');
+        if (!query) return reply("Please provide a search query");
+
+        const video = await searchVideo(query);
+        if (!video) return reply("No results found");
+
+        const ytmsg = `*🎬 Video Title* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*👁️ Views* - ${video.views?.toLocaleString() || "N/A"}\n*👤 Author* - ${video.channel?.name || "Unknown"}\n`;
+
+        const result = await downloadMedia(`https://youtu.be/${video.id}`, 'video');
+
+        if (!result.success) {
+            return reply(`❌ Download failed: ${result.error}`);
+        }
+
+        await conn.sendMessage(from, {
+            video: { url: result.filename },
+            caption: ytmsg,
+            mimetype: 'video/mp4'
+        }, { quoted: mek });
+
+        await fs.unlink(result.filename);
+    } catch (e) {
+        console.error(e);
+        reply("❌ An error occurred while processing the video");
+    }
+});
+
+module.exports = { downloadMedia, searchVideo };
