@@ -230,7 +230,7 @@ const cookies = [
     "session": false,
     "value": "AKEyXzXQV-YZSQNs3va1d1xVOtKrdfKoRyrR79Tr6k5VtpbvwYO3W7HmdNImX1OvFD5dfaV7"
   }
-];
+] ;
 // Create a custom agent with cookies
 const agent = ytdl.createAgent(cookies);
 
@@ -272,7 +272,7 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
 
     // Get video info
     // Get video info
-const info = await ytdl.getInfo(videoUrl);
+const info = await ytdl.getInfo(videoUrl, ytdlOptions);
 
 // Find the format with the specified itag (e.g., itag 18 for 360p)
 const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
@@ -283,7 +283,8 @@ if (!videoFormat) {
 
 // Download video with the specified itag
 const videoStream = ytdl.downloadFromInfo(info, {
-  format: videoFormat // Use the format with the specified
+  format: videoFormat, // Use the format with the specified itag
+  ...ytdlOptions,
 });
     await new Promise((resolve, reject) => {
       videoStream
