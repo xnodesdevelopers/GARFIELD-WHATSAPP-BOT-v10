@@ -258,7 +258,6 @@ const ytdlOptions = {
   },
   agent: agent, // Use the custom agent with cookies
 };
-
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e); // Log errors for debugging
