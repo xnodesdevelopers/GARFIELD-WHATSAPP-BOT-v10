@@ -1,29 +1,37 @@
 #!/usr/bin/env python3
-J=False
-I='error'
-E='success'
-B=True
-import yt_dlp as Q,json,sys as C,os as A
-from contextlib import redirect_stdout as R,redirect_stderr as S
-from io import StringIO as G
-H=A.path.join(A.path.dirname(__file__),'cookies.txt')
-D=A.path.join(A.path.dirname(__file__),'store')
-def K(url):
-	P='duration';O='m4a';F='title';K={'outtmpl':A.path.join(D,'%(title)s.%(ext)s'),'quiet':B,'no_warnings':B,'format':'bestaudio/best','postprocessors':[{'key':'FFmpegExtractAudio','preferredcodec':O,'preferredquality':'320'}],'extractaudio':B,'audioformat':O,'nocheckcertificate':B,'retries':3,'socket_timeout':30,'extractor_args':{'youtube':{'player_skip':['js','configs'],'skip':['dash','hls']}},'source_address':'0.0.0.0'}
-	if A.path.exists(H):K['cookiefile']=H
-	L=G();M=G()
+K='error'
+H='success'
+G='audio'
+D=False
+C=True
+import yt_dlp as X,json,sys as B,os as A
+from contextlib import redirect_stdout as Y,redirect_stderr as Z
+from io import StringIO as N
+O=A.path.join(A.path.dirname(__file__),'cookies.txt')
+J=A.path.join(A.path.dirname(__file__),'store')
+def I(url,media_type):
+	W='duration';V='mp4';U='key';T='postprocessors';S='format';M='title';I=media_type;B={'outtmpl':A.path.join(J,'%(id)s.%(ext)s'),'quiet':C,'no_warnings':C,'nocheckcertificate':C,'retries':3,'progress':D,'extract_flat':D,'check_formats':D}
+	if A.path.exists(O):B['cookiefile']=O
+	if I==G:B[S]='bestaudio/best';B[T]=[{U:'FFmpegExtractAudio','preferredcodec':'m4a','preferredquality':'320'}];B['extractor_args']={'youtube':{'skip':['dash','hls'],'player_skip':['js','configs']}};B['socket_timeout']=30
+	else:B[S]='bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]';B['merge_output_format']=V;B[T]=[{U:'FFmpegVideoRemuxer','preferedformat':V}]
+	P=N();Q=N()
 	try:
-		with R(L),S(M):
-			with Q.YoutubeDL(K)as N:
-				C=N.extract_info(url,download=B)
-				if not C or F not in C:raise ValueError('Failed to extract metadata')
-				T=N.prepare_filename(C);U,X=A.path.splitext(T);V=f"{U}.m4a";return{E:B,'filename':A.path.abspath(V),F:C.get(F,'Unknown'),P:C.get(P,0),'bitrate':320}
-	except Exception as W:return{E:J,I:f"Error: {str(W)}"}
-	finally:L.close();M.close()
+		with Y(P),Z(Q):
+			with X.YoutubeDL(B)as R:
+				F=R.extract_info(url,download=C)
+				if not F or M not in F:raise ValueError('Failed to extract metadata')
+				E=R.prepare_filename(F)
+				if I==G:L,b=A.path.splitext(E);E=f"{L}.m4a"
+				elif not E.endswith('.mp4'):L,c=A.path.splitext(E);E=f"{L}.mp4"
+				return{H:C,'filename':A.path.abspath(E),M:F.get(M,'Unknown'),W:F.get(W,0),'bitrate':320 if I==G else None}
+	except Exception as a:return{H:D,K:f"Error: {str(a)}",'type':I}
+	finally:P.close();Q.close()
 if __name__=='__main__':
-	if len(C.argv)!=2:F={E:J,I:'Usage: python ytdl.py <url>'}
+	if len(B.argv)!=3:E={H:D,K:'Usage: python ytdl.py <url> <audio|video>'}
 	else:
-		L=C.argv[1]
-		if not A.path.exists(D):A.makedirs(D,exist_ok=B)
-		F=K(L)
-	C.stdout.write(json.dumps(F));C.stdout.flush()
+		L=B.argv[1];F=B.argv[2].lower()
+		if F not in(G,'video'):E={H:D,K:'Media type must be "audio" or "video"'}
+		else:
+			if not A.path.exists(J):A.makedirs(J,exist_ok=C)
+			E=I(L,F)
+	B.stdout.write(json.dumps(E));B.stdout.flush()
