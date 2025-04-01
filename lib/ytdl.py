@@ -20,6 +20,8 @@ def extract_and_download(url, media_type):
         'retries': 2,
         'progress': False,
         'extract_flat': False,
+        # Disable video completely
+        'keepvideo': False,
         # Speed optimizations
         'socket_timeout': 30,
         'nopart': True,
