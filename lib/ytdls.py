@@ -11,7 +11,7 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def extract_and_download(url):
-    """Audio only download with video disabled"""
+    """Ultra fast audio download without re-encoding"""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
@@ -20,15 +20,15 @@ def extract_and_download(url):
         'retries': 2,
         'progress': False,
         'extract_flat': False,
-        # Disable video completely
-        'keepvideo': False,
-        # Audio only settings
-        'format': 'bestaudio[ext=m4a]',
-        'postprocessors': [],
         # Speed optimizations
         'socket_timeout': 30,
         'nopart': True,
         'http_chunk_size': 10485760,
+        # Audio only settings
+        'format': 'bestaudio[ext=m4a]',  # or 'bestaudio[ext=mp3]'
+        # Skip FFmpeg entirely
+        'postprocessors': [],
+        # Additional speed optimizations
         'extractor_args': {
             'youtube': {
                 'skip': ['dash', 'hls', 'translated_subs'],
@@ -66,7 +66,7 @@ def extract_and_download(url):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        result = {'success': False, 'error': 'Usage: python ytdls.py <url>'}
+        result = {'success': False, 'error': 'Usage: python ytdl.py <url>'}
     else:
         url = sys.argv[1]
         if not os.path.exists(STORE_DIR):
