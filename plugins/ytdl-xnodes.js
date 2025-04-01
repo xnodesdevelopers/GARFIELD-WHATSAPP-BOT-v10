@@ -232,20 +232,6 @@ const cookies = [
   }
 ] ;
 // Create a custom agent with cookies
-const agent = ytdl.createAgent(cookies);
-
-// Custom headers and options for ytdl
-const ytdlOptions = {
-  headers: {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    Accept:
-      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-  },
-  agent: agent, // Use the custom agent with cookies
-};
-
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e); // Log errors for debugging
@@ -341,34 +327,30 @@ cmd(
   },
   async (conn, mek, msg, { from, args, reply }) => {
     try {
-      const searchQuery = args.join(" "); // Get the search query
-      if (!searchQuery) {
-        return reply("❗️ Please provide a song name or keywords. 📝\nExample: .song Despacito");
-      }
+    const videoUrl = "https://www.youtube.com/watch?v=cBoh3SroBMo";
 
+// 3. Process and filter function
+async function processAndFilterVideo() {
+  try {
+    // Setup with cookies
+    const agent = ytdl.createAgent(cookies);
+    
+    // Get video info
+    const info = await ytdl.getInfo(videoUrl, { agent });
 
+    // Filter formats that have both video and audio
+    const videoAudioFormats = info.formats.filter(format => format.hasVideo && format.hasAudio);
 
-      // Search for the song
-      const video = await searchVideo(searchQuery);
+    // Console out the filtered formats
+    console.log("Formats with video and audio:", videoAudioFormats);
 
-      if (!video) {
-        return reply(`❌ No results found for "${searchQuery}".`);
-      }
+  } catch (error) {
+    console.error("Error:", error.message);
+  }
+}
 
-      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
-
-      // Send video details to the user
-      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
-      await conn.sendMessage(from, {
-        image: { url: video.thumbnails[0].url }, // Send video thumbnail
-        caption: ytmsg, // Send video details
-      });
-
-      // Download, convert, and send audio
-      await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
-    } catch (e) {
-      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
-    }
+// Start process
+processAndFilterVideo();
   }
 );
 
