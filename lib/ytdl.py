@@ -11,21 +11,19 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def download_video(url):
-    """Download video with maximum speed and minimal processing."""
+    """Download video with robust file handling."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'socket_timeout': 5,  # Reduced timeout for speed
-        'retries': 1,        # Fewer retries
+        'socket_timeout': 5,
+        'retries': 1,
         'progress': False,
-        # Fastest stable format (no separate audio/video merge if possible)
         'format': 'best[height<=360][ext=mp4][vcodec^=avc1]/best[height<=360][ext=mp4]',
         'merge_output_format': 'mp4',
-        # Skip postprocessing if possible
         'noplaylist': True,
-        'nooverwrites': True,  # Avoid re-downloading
+        'nooverwrites': True,
     }
 
     if os.path.exists(COOKIES_FILE):
@@ -36,33 +34,39 @@ def download_video(url):
     try:
         with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Minimal metadata extraction
+                # Extract minimal info
                 info = ydl.extract_info(url, download=False, process=False)
                 if not info or 'id' not in info:
                     raise ValueError("Failed to extract basic info")
 
-                # Download directly without extra checks
+                # Download the video
                 ydl.download([url])
-                filename = ydl.prepare_filename(info)
+                
+                # Get the expected filename
+                expected_filename = ydl.prepare_filename(info)
+                base, ext = os.path.splitext(expected_filename)
+                final_filename = f"{base}.mp4"
 
-                # Force MP4 extension if needed
-                if not filename.endswith('.mp4'):
-                    base, _ = os.path.splitext(filename)
-                    filename = f"{base}.mp4"
-                    if os.path.exists(filename):
-                        os.remove(filename)  # Clean up if exists
-                    os.rename(ydl.prepare_filename(info), filename)
+                # Check if the downloaded file exists
+                if not os.path.exists(expected_filename):
+                    raise FileNotFoundError(f"Downloaded file not found: {expected_filename}")
+
+                # Rename to .mp4 if needed
+                if expected_filename != final_filename:
+                    if os.path.exists(final_filename):
+                        os.remove(final_filename)  # Remove old file if it exists
+                    os.rename(expected_filename, final_filename)
 
                 return {
                     'success': True,
-                    'filename': os.path.abspath(filename),
+                    'filename': os.path.abspath(final_filename),
                     'title': info.get('title', 'Unknown'),
                     'duration': info.get('duration', 0)
                 }
     except Exception as e:
         return {
             'success': False,
-            'error': f"Error: {str(e)}"
+            'error': f"Download failed: Error: {str(e)}"
         }
     finally:
         stdout_buffer.close()
