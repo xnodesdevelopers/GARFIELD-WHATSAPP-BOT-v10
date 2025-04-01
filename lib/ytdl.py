@@ -3,7 +3,6 @@ import yt_dlp
 import json
 import sys
 import os
-import subprocess
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 
@@ -11,23 +10,22 @@ from io import StringIO
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
-def download_video(url, fast_verify=True):
-    """Download video with optimized settings and optional fast verification."""
+def download_video(url):
+    """Download video with maximum speed and minimal processing."""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'socket_timeout': 10,
-        'retries': 2,
+        'socket_timeout': 5,  # Reduced timeout for speed
+        'retries': 1,        # Fewer retries
         'progress': False,
-        # Optimized format for stable MP4 output
-        'format': 'bestvideo[height<=360][ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]',
+        # Fastest stable format (no separate audio/video merge if possible)
+        'format': 'best[height<=360][ext=mp4][vcodec^=avc1]/best[height<=360][ext=mp4]',
         'merge_output_format': 'mp4',
-        'postprocessors': [{
-            'key': 'FFmpegVideoRemuxer',
-            'preferedformat': 'mp4'
-        }]
+        # Skip postprocessing if possible
+        'noplaylist': True,
+        'nooverwrites': True,  # Avoid re-downloading
     }
 
     if os.path.exists(COOKIES_FILE):
@@ -38,28 +36,22 @@ def download_video(url, fast_verify=True):
     try:
         with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                if not info or 'title' not in info:
-                    raise ValueError("Failed to extract metadata")
+                # Minimal metadata extraction
+                info = ydl.extract_info(url, download=False, process=False)
+                if not info or 'id' not in info:
+                    raise ValueError("Failed to extract basic info")
 
+                # Download directly without extra checks
                 ydl.download([url])
                 filename = ydl.prepare_filename(info)
 
-                # Ensure MP4 extension
+                # Force MP4 extension if needed
                 if not filename.endswith('.mp4'):
                     base, _ = os.path.splitext(filename)
-                    new_filename = f"{base}.mp4"
-                    os.rename(filename, new_filename)
-                    filename = new_filename
-
-                # Optional fast verification
-                if fast_verify:
-                    try:
-                        # Check only first 5 seconds for playability
-                        cmd = ['ffmpeg', '-v', 'error', '-t', '5', '-i', filename, '-f', 'null', '-']
-                        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-                    except subprocess.CalledProcessError:
-                        raise ValueError("Downloaded video appears corrupted")
+                    filename = f"{base}.mp4"
+                    if os.path.exists(filename):
+                        os.remove(filename)  # Clean up if exists
+                    os.rename(ydl.prepare_filename(info), filename)
 
                 return {
                     'success': True,
@@ -83,8 +75,7 @@ if __name__ == "__main__":
         url = sys.argv[1]
         if not os.path.exists(STORE_DIR):
             os.makedirs(STORE_DIR, exist_ok=True)
-        # Set fast_verify=False if you want to skip verification completely
-        result = download_video(url, fast_verify=True)
+        result = download_video(url)
     
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
