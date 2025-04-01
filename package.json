@@ -9,9 +9,7 @@
     "stop": "pm2 stop index",
     "restart": "pm2 restart index"
   },
-  "engines": {
-    "node": "<=20.18.1"
-  },
+
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
     "@bochilteam/scraper": "^3.0.0",
@@ -22,7 +20,7 @@
     "@mrnima/tiktok-downloader": "1.0.0",
     "@vitalets/google-translate-api": "^9.2.0",
     "@whiskeysockets/baileys": "latest",
-    "garfield-ytdl": "5.0.0",
+    "garfield-ytdl": "6.0.0",
     "another-fb-video-downloader": "latest",
     "api-dylux": "1.8.5",
     "play-dl": "latest",
