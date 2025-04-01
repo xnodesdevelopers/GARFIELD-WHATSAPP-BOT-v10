@@ -1,5 +1,5 @@
 const { cmd } = require("../command"); // Assuming you have a command handler
-const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
+const ytdl = require("garfield-ytdl"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
 const fs = require("fs"); // For file system operations
 const path = require("path"); // For path operations
@@ -7,6 +7,7 @@ const ffmpeg = require("fluent-ffmpeg"); // For audio conversion
 
 // Ensure the ./store directory exists
 const storeDir = "./store";
+
 // Custom headers and options for ytdl
 const cookies = [
   {
@@ -230,7 +231,6 @@ const cookies = [
     "value": "AKEyXzXQV-YZSQNs3va1d1xVOtKrdfKoRyrR79Tr6k5VtpbvwYO3W7HmdNImX1OvFD5dfaV7"
   }
 ];
-
 // Create a custom agent with cookies
 const agent = ytdl.createAgent(cookies);
 
@@ -271,20 +271,21 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
     const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary audio file
 
     // Get video info
-    const info = await ytdl.getInfo(videoUrl, ytdlOptions);
-    const videoFormat = ytdl
-      .filterFormats(info.formats, "videoandaudio")
-      .find((f) => f.itag === 18); // Changed to specifically use itag 18
+    // Get video info
+const info = await ytdl.getInfo(videoUrl, ytdlOptions);
 
-    if (!videoFormat) {
-      return reply("❌ No suitable video format found. 😢");
-    }
+// Find the format with the specified itag (e.g., itag 18 for 360p)
+const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
 
-    // Download video with custom options
-    const videoStream = ytdl.downloadFromInfo(info, {
-      quality: 18, // Changed to specifically use itag 18
-      ...ytdlOptions,
-    });
+if (!videoFormat) {
+  return reply("❌ No suitable video format found for the specified itag. 😢");
+}
+
+// Download video with the specified itag
+const videoStream = ytdl.downloadFromInfo(info, {
+  format: videoFormat, // Use the format with the specified itag
+  ...ytdlOptions,
+});
     await new Promise((resolve, reject) => {
       videoStream
         .pipe(fs.createWriteStream(tempVideoFile))
@@ -346,6 +347,7 @@ cmd(
       }
 
 
+
       // Search for the song
       const video = await searchVideo(searchQuery);
 
@@ -356,9 +358,8 @@ cmd(
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
 
       // Send video details to the user
-      await reply (`_Downloading...._
-*${video.title}* 
-High Quality From Using *Youtube Music*`)
+      
+
       // Download, convert, and send audio
       await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
     } catch (e) {
