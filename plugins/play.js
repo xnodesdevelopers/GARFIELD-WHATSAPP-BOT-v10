@@ -7,7 +7,6 @@ const ffmpeg = require("fluent-ffmpeg"); // For audio conversion
 
 // Ensure the ./store directory exists
 const storeDir = "./store";
-
 // Custom headers and options for ytdl
 const cookies = [
   {
@@ -42,17 +41,6 @@ const cookies = [
     "secure": true,
     "session": false,
     "value": "CgJTRxIEGgAgYg%3D%3D"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "PREF",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "tz=Asia.Colombo"
   },
   {
     "domain": ".youtube.com",
@@ -201,12 +189,23 @@ const cookies = [
     "domain": ".youtube.com",
     "hostOnly": false,
     "httpOnly": true,
+    "name": "PREF",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "tz=Asia.Colombo&f7=100"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
     "name": "SIDCC",
     "path": "/",
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzX2dxOP53iE1zIP2PtYbjrKWH8TLrkrG6TeUoyR2rBMzUJTLxUVTFNEds1H6lpskglfLQ"
+    "value": "AKEyXzUDpqZkUGZaRMAg6Rlwjs4QlFtV34XDiF8RKeQTCSAB8FwTcAe5OdJ48tc-gDn7lXHasw"
   },
   {
     "domain": ".youtube.com",
@@ -217,7 +216,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzV-c3sCnWchLEerjPm-rhy-yot16Dnn_-bA_NXEeMCqu8ce51FwLmNdzTb43oxP26qd"
+    "value": "AKEyXzU3YVRnMwYpPbCIojmxr7DLqINRi_Viw44xybTNqjAnjDjuJD7ef_Ofjg4zvXU_86s6"
   },
   {
     "domain": ".youtube.com",
@@ -228,9 +227,10 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzWMHHKMs2nLl6LrOnZGsXhlen5F12FEdjofwKWPBDiRHvRRi-gMPq2CBWoRMtYOSGE4"
+    "value": "AKEyXzXQV-YZSQNs3va1d1xVOtKrdfKoRyrR79Tr6k5VtpbvwYO3W7HmdNImX1OvFD5dfaV7"
   }
 ];
+
 // Create a custom agent with cookies
 const agent = ytdl.createAgent(cookies);
 
@@ -271,21 +271,20 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
     const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary audio file
 
     // Get video info
-    // Get video info
-const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+    const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+    const videoFormat = ytdl
+      .filterFormats(info.formats, "videoandaudio")
+      .find((f) => f.itag === 18); // Changed to specifically use itag 18
 
-// Find the format with the specified itag (e.g., itag 18 for 360p)
-const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
+    if (!videoFormat) {
+      return reply("❌ No suitable video format found. 😢");
+    }
 
-if (!videoFormat) {
-  return reply("❌ No suitable video format found for the specified itag. 😢");
-}
-
-// Download video with the specified itag
-const videoStream = ytdl.downloadFromInfo(info, {
-  format: videoFormat, // Use the format with the specified itag
-  ...ytdlOptions,
-});
+    // Download video with custom options
+    const videoStream = ytdl.downloadFromInfo(info, {
+      quality: 18, // Changed to specifically use itag 18
+      ...ytdlOptions,
+    });
     await new Promise((resolve, reject) => {
       videoStream
         .pipe(fs.createWriteStream(tempVideoFile))
@@ -347,7 +346,6 @@ cmd(
       }
 
 
-
       // Search for the song
       const video = await searchVideo(searchQuery);
 
@@ -357,10 +355,10 @@ cmd(
 
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
 
-      await reply(`_Downloading...._
+      // Send video details to the user
+      await reply (`_Downloading...._
 *${video.title}* 
 High Quality From Using *Youtube Music*`)
-
       // Download, convert, and send audio
       await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
     } catch (e) {
@@ -368,3 +366,4 @@ High Quality From Using *Youtube Music*`)
     }
   }
 );
+
