@@ -6,40 +6,65 @@ from pytube import YouTube
 from pytube.exceptions import PytubeError
 from pathlib import Path
 import subprocess
+import http.cookiejar
 
 # Define paths
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
-def download_with_ffmpeg(stream, output_path):
-    """Download using ffmpeg for potentially better performance"""
+def load_cookies():
+    """Load cookies from file if exists"""
+    if os.path.exists(COOKIES_FILE):
+        cookie_jar = http.cookiejar.MozillaCookieJar(COOKIES_FILE)
+        cookie_jar.load()
+        return cookie_jar
+    return None
+
+def download_with_ffmpeg(stream, output_path, cookies=None):
+    """Download using ffmpeg with optional cookies"""
     cmd = [
         'ffmpeg',
+        '-headers', f'Cookie: {cookies}' if cookies else '',
         '-i', stream.url,
-        '-c', 'copy',  # No re-encoding for fastest speed
-        '-y',  # Overwrite without asking
+        '-c', 'copy',
+        '-y',
         output_path
     ]
     subprocess.run(cmd, check=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
 def extract_and_download(url, media_type):
-    """Ultra fast download implementation using pytube"""
+    """Download implementation with cookie support"""
     try:
         # Create store directory if not exists
         Path(STORE_DIR).mkdir(parents=True, exist_ok=True)
         
-        yt = YouTube(url)
-        yt.bypass_age_gate()  # Bypass age restriction checks
+        # Load cookies if available
+        cookies = load_cookies()
+        cookie_header = None
+        if cookies:
+            cookie_header = '; '.join([f'{c.name}={c.value}' for c in cookies])
+        
+        yt = YouTube(
+            url,
+            use_oauth=False,
+            allow_oauth_cache=False,
+            # Pytube doesn't directly support cookie files, so we'll pass headers manually
+        )
+        yt.bypass_age_gate()
         
         if media_type == 'audio':
-            # Get the best audio stream
             stream = yt.streams.filter(only_audio=True, mime_type='audio/mp4').order_by('abr').last()
             if not stream:
                 raise PytubeError("No suitable audio stream found")
             
             output_path = os.path.join(STORE_DIR, f"{yt.video_id}.m4a")
-            stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.m4a", skip_existing=False)
             
-            # Return metadata in the exact format expected by the JavaScript code
+            if cookie_header:
+                # Use FFmpeg with cookies for potentially better compatibility
+                download_with_ffmpeg(stream, output_path, cookie_header)
+            else:
+                stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.m4a")
+            
             return {
                 'success': True,
                 'filename': os.path.abspath(output_path),
@@ -48,7 +73,6 @@ def extract_and_download(url, media_type):
             }
             
         else:  # video
-            # Get 360p mp4 stream (matching the JavaScript command description)
             stream = yt.streams.filter(
                 progressive=True,
                 file_extension='mp4',
@@ -56,7 +80,6 @@ def extract_and_download(url, media_type):
             ).first()
             
             if not stream:
-                # Fallback to any mp4 stream if no 360p available
                 stream = yt.streams.filter(
                     progressive=True,
                     file_extension='mp4'
@@ -66,8 +89,12 @@ def extract_and_download(url, media_type):
                 raise PytubeError("No suitable video stream found")
             
             output_path = os.path.join(STORE_DIR, f"{yt.video_id}.mp4")
-            stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.mp4", skip_existing=False)
-        
+            
+            if cookie_header:
+                download_with_ffmpeg(stream, output_path, cookie_header)
+            else:
+                stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.mp4")
+            
             return {
                 'success': True,
                 'filename': os.path.abspath(output_path),
@@ -89,6 +116,5 @@ if __name__ == "__main__":
         media_type = sys.argv[2]
         result = extract_and_download(url, media_type)
     
-    # Ensure the output is in the exact format expected by the JavaScript code
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
