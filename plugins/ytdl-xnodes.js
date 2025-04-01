@@ -1,5 +1,3 @@
-එය ඇසුරින් මෙහි කෝඩ් fix කරන්න 
-
 const { cmd } = require("../command"); // Assuming you have a command handler
 const ytdl = require("@distube/ytdl-core"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
@@ -12,7 +10,226 @@ const storeDir = "./store";
 
 // Custom headers and options for ytdl
 const cookies = [
- // i fix later
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "YSC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "y3J2I4ug7_Y"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "VISITOR_INFO1_LIVE",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "23fLZJsdyko"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "VISITOR_PRIVACY_METADATA",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "CgJTRxIEGgAgYg%3D%3D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "PREF",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "tz=Asia.Colombo"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSIDTS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PSIDTS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "HSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "Aniy9moFdgwAbwxhX"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AOg1LQ_s6ntw10z_Z"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "APISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "CvDxwK2BItUN-tzF/AuAXNKzT-xawmDzkr"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Spf5ujzjfbNmvHhCgoMBDrRQACgYKAfkSARASFQHGX2MiPlbWPNWVwhe6pjbzYIjwshoVAUF8yKpov3-JaFWc1qiTukHtQYzm0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_SprZyHJbhxnN_8dLRD5XAHpgACgYKATcSARASFQHGX2MiH3bMYpm0n3Zdt8WVGOivmxoVAUF8yKpGMEJwoIRbUdZcUuFprUMq0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Sp15ZHmt6cN6TQnilPhMWTgwACgYKATsSARASFQHGX2Mi6VpMNVdKtVF-tanfhe3aYBoVAUF8yKq0EqaR5MEyL34UgLqeT7IY0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "LOGIN_INFO",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AFmmF2swRAIgBqcuJdssqOxuxg1q7aAdYMiL9t9Ty2f5Fk--YU6VPT0CIC2axghJpTkIXImas4PDBGqto0RbkXw27E6S_Xm-9nUe:QUQ3MjNmdzRkWlFveUFKb0gzUTQzZURKWlhHR3VnRko5dnYzMXk2dWM4dm9kTFhCOFhoeXVhVnFRM2tvZlA2MHJ3UHhNVWltN2JlZ3lLbTM5dG1NNVhYcWxTQXNPSXVBcGdhWFh3R3hkNWo0MzdMcUV3Qm1idFkwMTlfRWw5clRpdkVpeUtVT3dWVTR3UWxBcG1rYTZBSjlaaDkzNFRsODZ3"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-ROLLOUT_TOKEN",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "CMjptNCdkZS38wEQ3qrKy42sjAMY1JSusdS0jAM%3D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SIDCC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AKEyXzX2dxOP53iE1zIP2PtYbjrKWH8TLrkrG6TeUoyR2rBMzUJTLxUVTFNEds1H6lpskglfLQ"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSIDCC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AKEyXzV-c3sCnWchLEerjPm-rhy-yot16Dnn_-bA_NXEeMCqu8ce51FwLmNdzTb43oxP26qd"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PSIDCC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AKEyXzWMHHKMs2nLl6LrOnZGsXhlen5F12FEdjofwKWPBDiRHvRRi-gMPq2CBWoRMtYOSGE4"
+  }
 ];
 // Create a custom agent with cookies
 const agent = ytdl.createAgent(cookies);
