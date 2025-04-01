@@ -1,35 +1,94 @@
 #!/usr/bin/env python3
-N='error'
-I='success'
-F=False
-D=True
-import yt_dlp as X,json,sys as B,os as A,subprocess
-from contextlib import redirect_stdout as Y,redirect_stderr as Z
-from io import StringIO as L
-M=A.path.join(A.path.dirname(__file__),'cookies.txt')
-H=A.path.join(A.path.dirname(__file__),'store')
-def E(url,media_type):
-	W='duration';V='mp4';U='key';T='postprocessors';S='format';R='audio';O=media_type;K='title';B={'outtmpl':A.path.join(H,'%(id)s.%(ext)s'),'quiet':D,'no_warnings':D,'nocheckcertificate':D,'retries':2,'progress':F,'extract_flat':F}
-	if A.path.exists(M):B['cookiefile']=M
-	if O==R:B[S]='bestaudio/best';B[T]=[{U:'FFmpegExtractAudio','preferredcodec':'m4a'}];B['socket_timeout']=None;B['extractor_args']={'youtube':{'skip':['dash','hls']}}
-	else:B[S]='bestvideo[height<=360][ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]';B['merge_output_format']=V;B[T]=[{U:'FFmpegVideoRemuxer','preferedformat':V}]
-	P=L();Q=L()
-	try:
-		with Y(P),Z(Q):
-			with X.YoutubeDL(B)as G:
-				G.params['check_formats']=F;E=G.extract_info(url,download=D)
-				if not E or K not in E:raise ValueError('Failed to extract metadata')
-				if O==R:C=G.prepare_filename(E);J,b=A.path.splitext(C);C=f"{J}.m4a"
-				else:
-					C=G.prepare_filename(E)
-					if not C.endswith('.mp4'):J,c=A.path.splitext(C);C=f"{J}.mp4"
-				return{I:D,'filename':A.path.abspath(C),K:E.get(K,'Unknown'),W:E.get(W,0)}
-	except Exception as a:return{I:F,N:f"Error: {str(a)}"}
-	finally:P.close();Q.close()
-if __name__=='__main__':
-	if len(B.argv)!=3:C={I:F,N:'Usage: python ytdl.py <url> <media_type>'}
-	else:
-		G=B.argv[1];J=B.argv[2]
-		if not A.path.exists(H):A.makedirs(H,exist_ok=D)
-		C=E(G,J)
-	B.stdout.write(json.dumps(C));B.stdout.flush()
+import json
+import sys
+import os
+from pytube import YouTube
+from pytube.exceptions import PytubeError
+from pathlib import Path
+import subprocess
+
+# Define paths
+STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
+
+def download_with_ffmpeg(stream, output_path):
+    """Download using ffmpeg for potentially better performance"""
+    cmd = [
+        'ffmpeg',
+        '-i', stream.url,
+        '-c', 'copy',  # No re-encoding for fastest speed
+        '-y',  # Overwrite without asking
+        output_path
+    ]
+    subprocess.run(cmd, check=True, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
+def extract_and_download(url, media_type):
+    """Ultra fast download implementation using pytube"""
+    try:
+        # Create store directory if not exists
+        Path(STORE_DIR).mkdir(parents=True, exist_ok=True)
+        
+        yt = YouTube(url)
+        yt.bypass_age_gate()  # Bypass age restriction checks
+        
+        if media_type == 'audio':
+            # Get the best audio stream
+            stream = yt.streams.filter(only_audio=True, mime_type='audio/mp4').order_by('abr').last()
+            if not stream:
+                raise PytubeError("No suitable audio stream found")
+            
+            output_path = os.path.join(STORE_DIR, f"{yt.video_id}.m4a")
+            stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.m4a", skip_existing=False)
+            
+            # Return metadata in the exact format expected by the JavaScript code
+            return {
+                'success': True,
+                'filename': os.path.abspath(output_path),
+                'title': yt.title,
+                'duration': yt.length
+            }
+            
+        else:  # video
+            # Get 360p mp4 stream (matching the JavaScript command description)
+            stream = yt.streams.filter(
+                progressive=True,
+                file_extension='mp4',
+                resolution='360p'
+            ).first()
+            
+            if not stream:
+                # Fallback to any mp4 stream if no 360p available
+                stream = yt.streams.filter(
+                    progressive=True,
+                    file_extension='mp4'
+                ).order_by('resolution').first()
+                
+            if not stream:
+                raise PytubeError("No suitable video stream found")
+            
+            output_path = os.path.join(STORE_DIR, f"{yt.video_id}.mp4")
+            stream.download(output_path=STORE_DIR, filename=f"{yt.video_id}.mp4", skip_existing=False)
+        
+            return {
+                'success': True,
+                'filename': os.path.abspath(output_path),
+                'title': yt.title,
+                'duration': yt.length
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f"Error: {str(e)}"
+        }
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        result = {'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}
+    else:
+        url = sys.argv[1]
+        media_type = sys.argv[2]
+        result = extract_and_download(url, media_type)
+    
+    # Ensure the output is in the exact format expected by the JavaScript code
+    sys.stdout.write(json.dumps(result))
+    sys.stdout.flush()
