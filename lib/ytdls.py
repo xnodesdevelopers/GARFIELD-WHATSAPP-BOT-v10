@@ -11,7 +11,7 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
 def download_audio(url):
-    """Ultra fast M4A audio download without re-encoding"""
+    """Ultra fast audio download without re-encoding (prefers M4A)"""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
@@ -22,8 +22,8 @@ def download_audio(url):
         'nopart': True,
         'http_chunk_size': 20971520,
         'concurrent_fragment_downloads': 4,
-        # Audio format selection (M4A without re-encoding)
-        'format': 'bestaudio[ext=m4a]',
+        # Audio format selection (prefer m4a, fallback to best available)
+        'format': 'bestaudio[ext=m4a]/bestaudio',
         'extractaudio': True,
         'keepvideo': False,
         # Skip all processing
@@ -57,7 +57,8 @@ def download_audio(url):
                     'success': True,
                     'filename': os.path.abspath(filename),
                     'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0)
+                    'duration': info.get('duration', 0),
+                    'format': info.get('ext', 'unknown')
                 }
     except Exception as e:
         return {
