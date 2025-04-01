@@ -1,77 +1,26 @@
 #!/usr/bin/env python3
-import yt_dlp
-import json
-import sys
-import os
-from contextlib import redirect_stdout, redirect_stderr
-from io import StringIO
-
-# Define paths
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
-STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
-
-def extract_and_download(url):
-    """Ultra fast audio download without re-encoding"""
-    ydl_opts = {
-        'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
-        'quiet': True,
-        'no_warnings': True,
-        'nocheckcertificate': True,
-        'retries': 2,
-        'progress': False,
-        'extract_flat': False,
-        # Speed optimizations
-        'socket_timeout': 30,
-        'nopart': True,
-        'http_chunk_size': 10485760,
-        # Audio only settings
-        'format': 'bestaudio[ext=m4a]',  # or 'bestaudio[ext=mp3]'
-        # Skip FFmpeg entirely
-        'postprocessors': [],
-        # Additional speed optimizations
-        'extractor_args': {
-            'youtube': {
-                'skip': ['dash', 'hls', 'translated_subs'],
-                'player_skip': ['configs', 'webpage']
-            }
-        }
-    }
-
-    if os.path.exists(COOKIES_FILE):
-        ydl_opts['cookiefile'] = COOKIES_FILE
-
-    stdout_buffer = StringIO()
-    stderr_buffer = StringIO()
-    try:
-        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.params['check_formats'] = False
-                info = ydl.extract_info(url, download=True)
-                
-                filename = ydl.prepare_filename(info)
-                return {
-                    'success': True,
-                    'filename': os.path.abspath(filename),
-                    'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0)
-                }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"Error: {str(e)}"
-        }
-    finally:
-        stdout_buffer.close()
-        stderr_buffer.close()
-
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        result = {'success': False, 'error': 'Usage: python ytdl.py <url>'}
-    else:
-        url = sys.argv[1]
-        if not os.path.exists(STORE_DIR):
-            os.makedirs(STORE_DIR, exist_ok=True)
-        result = extract_and_download(url)
-    
-    sys.stdout.write(json.dumps(result))
-    sys.stdout.flush()
+J='error'
+F='success'
+C=False
+B=True
+import yt_dlp as P,json,sys as D,os as A
+from contextlib import redirect_stdout as Q,redirect_stderr as R
+from io import StringIO as H
+I=A.path.join(A.path.dirname(__file__),'cookies.txt')
+E=A.path.join(A.path.dirname(__file__),'store')
+def K(url):
+	O='duration';N='title';K={'outtmpl':A.path.join(E,'%(id)s.%(ext)s'),'quiet':B,'no_warnings':B,'nocheckcertificate':B,'retries':2,'progress':C,'extract_flat':C,'socket_timeout':30,'nopart':B,'http_chunk_size':10485760,'format':'bestaudio[ext=m4a]','postprocessors':[],'extractor_args':{'youtube':{'skip':['dash','hls','translated_subs'],'player_skip':['configs','webpage']}}}
+	if A.path.exists(I):K['cookiefile']=I
+	L=H();M=H()
+	try:
+		with Q(L),R(M):
+			with P.YoutubeDL(K)as D:D.params['check_formats']=C;G=D.extract_info(url,download=B);S=D.prepare_filename(G);return{F:B,'filename':A.path.abspath(S),N:G.get(N,'Unknown'),O:G.get(O,0)}
+	except Exception as T:return{F:C,J:f"Error: {str(T)}"}
+	finally:L.close();M.close()
+if __name__=='__main__':
+	if len(D.argv)!=2:G={F:C,J:'Usage: python ytdl.py <url>'}
+	else:
+		L=D.argv[1]
+		if not A.path.exists(E):A.makedirs(E,exist_ok=B)
+		G=K(L)
+	D.stdout.write(json.dumps(G));D.stdout.flush()
