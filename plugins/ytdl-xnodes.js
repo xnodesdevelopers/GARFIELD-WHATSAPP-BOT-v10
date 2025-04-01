@@ -272,7 +272,7 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
 
     // Get video info
     // Get video info
-const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+const info = await ytdl.getInfo(videoUrl);
 
 // Find the format with the specified itag (e.g., itag 18 for 360p)
 const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
@@ -283,8 +283,7 @@ if (!videoFormat) {
 
 // Download video with the specified itag
 const videoStream = ytdl.downloadFromInfo(info, {
-  format: videoFormat, // Use the format with the specified itag
-  ...ytdlOptions,
+  format: videoFormat // Use the format with the specified
 });
     await new Promise((resolve, reject) => {
       videoStream
