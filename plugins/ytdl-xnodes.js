@@ -14,12 +14,23 @@ const cookies = [
     "domain": ".youtube.com",
     "hostOnly": false,
     "httpOnly": true,
+    "name": "GPS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "1"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
     "name": "YSC",
     "path": "/",
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "y3J2I4ug7_Y"
+    "value": "8P5xypq0HNI"
   },
   {
     "domain": ".youtube.com",
@@ -30,7 +41,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "23fLZJsdyko"
+    "value": "8zLOKUr7WwA"
   },
   {
     "domain": ".youtube.com",
@@ -41,150 +52,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "CgJTRxIEGgAgYg%3D%3D"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-1PSIDTS",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-3PSIDTS",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "sidts-CjIB7pHptT6ynkkbQXBB356bDAaOriEsmD956xf_2vHr-JcQOQbTWpb8KVsEOk06swPOuBAA"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "HSID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "Aniy9moFdgwAbwxhX"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "SSID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "AOg1LQ_s6ntw10z_Z"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "APISID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "CvDxwK2BItUN-tzF/AuAXNKzT-xawmDzkr"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "SAPISID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-1PAPISID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-3PAPISID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "0gUDI6X8EmM3hVCQ/AIYKsf_mXQbuii33D"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "SID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Spf5ujzjfbNmvHhCgoMBDrRQACgYKAfkSARASFQHGX2MiPlbWPNWVwhe6pjbzYIjwshoVAUF8yKpov3-JaFWc1qiTukHtQYzm0076"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-1PSID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_SprZyHJbhxnN_8dLRD5XAHpgACgYKATcSARASFQHGX2MiH3bMYpm0n3Zdt8WVGOivmxoVAUF8yKpGMEJwoIRbUdZcUuFprUMq0076"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-3PSID",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "g.a000vQhqA8tVsc04y5PE0GMxExNyfgXq_m0_c1Ls5wD9MUImO_Sp15ZHmt6cN6TQnilPhMWTgwACgYKATsSARASFQHGX2Mi6VpMNVdKtVF-tanfhe3aYBoVAUF8yKq0EqaR5MEyL34UgLqeT7IY0076"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "LOGIN_INFO",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "AFmmF2swRAIgBqcuJdssqOxuxg1q7aAdYMiL9t9Ty2f5Fk--YU6VPT0CIC2axghJpTkIXImas4PDBGqto0RbkXw27E6S_Xm-9nUe:QUQ3MjNmdzRkWlFveUFKb0gzUTQzZURKWlhHR3VnRko5dnYzMXk2dWM4dm9kTFhCOFhoeXVhVnFRM2tvZlA2MHJ3UHhNVWltN2JlZ3lLbTM5dG1NNVhYcWxTQXNPSXVBcGdhWFh3R3hkNWo0MzdMcUV3Qm1idFkwMTlfRWw5clRpdkVpeUtVT3dWVTR3UWxBcG1rYTZBSjlaaDkzNFRsODZ3"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "__Secure-ROLLOUT_TOKEN",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "CMjptNCdkZS38wEQ3qrKy42sjAMY1JSusdS0jAM%3D"
+    "value": "CgJHQhIEGgAgRQ%3D%3D"
   },
   {
     "domain": ".youtube.com",
@@ -195,7 +63,150 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "tz=Asia.Colombo&f7=100"
+    "value": "tz=Asia.Colombo"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSIDTS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "sidts-CjEB7pHptZsuafLBTmLVdy2FgcGDQ8Y6q4SvnElAKMEJueaHjuqKMA5ukDVkLCwHiekJEAA"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PSIDTS",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "sidts-CjEB7pHptZsuafLBTmLVdy2FgcGDQ8Y6q4SvnElAKMEJueaHjuqKMA5ukDVkLCwHiekJEAA"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "HSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AFIknu3GL_fCIPVnE"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AA2YkDJ9WwJvrsL5b"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "APISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "5X31BXfVw-wreDgY/Au8TqwFud1oOlhRFS"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "T2YxYg4s1JPdUynU/AwgbdyH_mmbCYGRr4"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "T2YxYg4s1JPdUynU/AwgbdyH_mmbCYGRr4"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PAPISID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "T2YxYg4s1JPdUynU/AwgbdyH_mmbCYGRr4"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "SID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA7ss3wZHxXhgkYwCwTKNFD4pMT0pQIUdN8bnwh7smsEFUa8JI5nxY-Qf4xeZHw_dQgACgYKAWESARASFQHGX2MiUz43plcxXZ6RR23XiwsUjxoVAUF8yKqbu0XhRNinuBI_aaLvdFbX0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-1PSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA7ss3wZHxXhgkYwCwTKNFD4pMT0pQIUdN8bnwh7smsEFzW0cYHFzRfBlZ2hf5Y52GQACgYKAT4SARASFQHGX2MisahmqIdNyShuPquAHu3XhRoVAUF8yKoZNE7iL7m3d8euhfEzCuGl0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-3PSID",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "g.a000vQhqA7ss3wZHxXhgkYwCwTKNFD4pMT0pQIUdN8bnwh7smsEFGDDvADYM0VhwvDcPmt_HmAACgYKAVUSARASFQHGX2MitzLPw1G4OJiNzV_NXsqWfhoVAUF8yKrDwUSNQEzRZV9GtKwD0gNY0076"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "__Secure-ROLLOUT_TOKEN",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "CKe_3Z6Zg9uOJhCPj6y2jraMAxjPseLpjraMAw%3D%3D"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "LOGIN_INFO",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AFmmF2swRAIgSQJmfCiB_EFPxBmaUg0B-KbwnwsT2L4EI74F8OgklLgCIF6XO3DvyKVixTuXui4rr8NrZmjLo-Jm_ckmXwBlcN8J:QUQ3MjNmelVNeFdEcmJZa2FnS21hM2N2UGZPaUs4ZjFaRTdRODhmVHZkWU93R0NuOFlfVVJRTnV3cUJ1QXdXQldzZkhPU0VUaXI3ckxVVGpxYXFpZkN4S3I5VThJX1pIaU9oS1dqbG1kRHhOR1RYU1hqNXlpaGM2aVZXZzdUNXJVTTN3YS01c0RWdkM1MkxIemxqTjBTd0VSdks4SURjVld3"
   },
   {
     "domain": ".youtube.com",
@@ -206,7 +217,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzUDpqZkUGZaRMAg6Rlwjs4QlFtV34XDiF8RKeQTCSAB8FwTcAe5OdJ48tc-gDn7lXHasw"
+    "value": "AKEyXzWmLd6Nm3Fv1Dy1P-LHGpBtZ5IEo3rgnn9ApXpTpR9qLutYsK2ZdhN9MG5_evn6M97H6A"
   },
   {
     "domain": ".youtube.com",
@@ -217,7 +228,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzU3YVRnMwYpPbCIojmxr7DLqINRi_Viw44xybTNqjAnjDjuJD7ef_Ofjg4zvXU_86s6"
+    "value": "AKEyXzUEj_cI3s3yZGSEgelnTDOlwtP4A9ABvtD-n-md9_nyzHTg3LJKzKxw48V_KnWQUomM"
   },
   {
     "domain": ".youtube.com",
@@ -228,7 +239,7 @@ const cookies = [
     "sameSite": "no_restriction",
     "secure": true,
     "session": false,
-    "value": "AKEyXzXQV-YZSQNs3va1d1xVOtKrdfKoRyrR79Tr6k5VtpbvwYO3W7HmdNImX1OvFD5dfaV7"
+    "value": "AKEyXzUt5-_t4s6vidgD9s8A5l82Q7KpQlhILJk0prSocpIFcrBfOCvpQYvyykoG-rboiAA6"
   }
 ] ;
 // Create a custom agent with cookies
