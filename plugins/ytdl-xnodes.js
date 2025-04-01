@@ -315,7 +315,6 @@ const videoStream = ytdl.downloadFromInfo(info, {
   }
 };
 
-// Command to download and send audio
 cmd(
   {
     pattern: "song",
@@ -327,30 +326,34 @@ cmd(
   },
   async (conn, mek, msg, { from, args, reply }) => {
     try {
-    const videoUrl = "https://www.youtube.com/watch?v=cBoh3SroBMo";
+      const videoUrl = "https://www.youtube.com/watch?v=cBoh3SroBMo";
 
-// 3. Process and filter function
-async function processAndFilterVideo() {
-  try {
-    // Setup with cookies
-    const agent = ytdl.createAgent(cookies);
-    
-    // Get video info
-    const info = await ytdl.getInfo(videoUrl, { agent });
+      // 3. Process and filter function
+      async function processAndFilterVideo() {
+        try {
+          // Setup with cookies
+          const agent = ytdl.createAgent(cookies);
 
-    // Filter formats that have both video and audio
-    const videoAudioFormats = info.formats.filter(format => format.hasVideo && format.hasAudio);
+          // Get video info
+          const info = await ytdl.getInfo(videoUrl, { agent });
 
-    // Console out the filtered formats
-    console.log("Formats with video and audio:", videoAudioFormats);
+          // Filter formats that have both video and audio
+          const videoAudioFormats = info.formats.filter(
+            (format) => format.hasVideo && format.hasAudio
+          );
 
-  } catch (error) {
-    console.error("Error:", error.message);
-  }
-}
+          // Log the filtered formats
+          console.log("Formats with video and audio:", videoAudioFormats);
+        } catch (error) {
+          console.error("Error:", error.message);
+        }
+      }
 
-// Start process
-processAndFilterVideo();
+      // Start process
+      await processAndFilterVideo();
+    } catch (error) {
+      console.error("Error in main command:", error.message);
+    }
   }
 );
 
