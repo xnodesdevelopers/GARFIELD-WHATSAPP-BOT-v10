@@ -10,46 +10,51 @@ from io import StringIO
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
-def download_audio(url):
-    """Ultra fast audio download without re-encoding (prefers M4A)"""
+def extract_and_download(url, media_type):
+    """Ultra fast audio download with optimizations"""
     ydl_opts = {
         'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'retries': 2,
+        'progress': False,
+        'extract_flat': False,
         # Speed optimizations
-        'socket_timeout': 10,
+        'socket_timeout': 30,
         'nopart': True,
-        'http_chunk_size': 20971520,
-        'concurrent_fragment_downloads': 4,
-        # Audio format selection (prefer m4a, fallback to best available)
-        'format': 'bestaudio[ext=m4a]/bestaudio',
-        'extractaudio': True,
-        'keepvideo': False,
-        # Skip all processing
-        'postprocessors': [],
-        'nooverwrites': True,
-        # YouTube specific optimizations
-        'extractor_args': {
-            'youtube': {
-                'skip': ['dash', 'hls', 'translated_subs', 'thumbnails'],
-                'player_skip': ['configs', 'webpage', 'js']
-            }
-        },
-        # Network optimizations
-        'ratelimit': 0,
-        'buffersize': 65536,
+        'http_chunk_size': 10485760,
+        'check_formats': False,
     }
 
     if os.path.exists(COOKIES_FILE):
         ydl_opts['cookiefile'] = COOKIES_FILE
+
+    if media_type == 'audio':
+        # Directly download best audio without re-encoding
+        ydl_opts = {
+            **ydl_opts,
+            'format': 'bestaudio/best',
+            'postprocessors': [],  # Skip all postprocessing
+            'extractor_args': {
+                'youtube': {
+                    'skip': ['dash', 'hls', 'translated_subs'],
+                    'player_skip': ['configs', 'webpage']
+                }
+            },
+            # Prefer formats that don't need conversion
+            'prefer_free_formats': True,
+            'keepvideo': False,  # Don't keep video track
+        }
+    else:  # video (kept for compatibility)
+        ydl_opts['format'] = 'bestvideo[height<=360]+bestaudio/best[height<=360]'
+        ydl_opts['merge_output_format'] = 'mp4'
 
     stdout_buffer = StringIO()
     stderr_buffer = StringIO()
     try:
         with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.params['check_formats'] = False
                 info = ydl.extract_info(url, download=True)
                 
                 filename = ydl.prepare_filename(info)
@@ -57,8 +62,7 @@ def download_audio(url):
                     'success': True,
                     'filename': os.path.abspath(filename),
                     'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0),
-                    'format': info.get('ext', 'unknown')
+                    'duration': info.get('duration', 0)
                 }
     except Exception as e:
         return {
@@ -70,13 +74,14 @@ def download_audio(url):
         stderr_buffer.close()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        result = {'success': False, 'error': 'Usage: python ytdl.py <url>'}
+    if len(sys.argv) != 3:
+        result = {'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}
     else:
         url = sys.argv[1]
+        media_type = sys.argv[2]
         if not os.path.exists(STORE_DIR):
             os.makedirs(STORE_DIR, exist_ok=True)
-        result = download_audio(url)
+        result = extract_and_download(url, media_type)
     
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
