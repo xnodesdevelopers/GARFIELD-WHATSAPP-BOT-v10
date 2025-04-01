@@ -11,7 +11,7 @@ const PYTHON_SCRIPT = path.join(__dirname, "../lib/ytdls.py");
 const downloadMedia = async (url) => {
     try {
         const rawOutput = execFileSync(PYTHON_PATH, [PYTHON_SCRIPT, url], { 
-            maxBuffer: 50 * 1024 * 1024,
+    
             encoding: 'utf-8'
         }).toString().trim();
 
