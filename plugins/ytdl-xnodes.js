@@ -358,7 +358,7 @@ cmd(
         return reply("❗️ Please provide a song name or keywords. 📝\nExample: .song Despacito");
       }
 
-      reply("```🔍 Searching for the song... 🎵```");
+      
 
       // Search for the song
       const video = await searchVideo(searchQuery);
@@ -402,7 +402,7 @@ cmd(
         );
       }
 
-      reply("```🔍 Searching for the video... 🎥```");
+      
 
       // Search for the video using play-dl
       const video = await searchVideo(searchQuery);
