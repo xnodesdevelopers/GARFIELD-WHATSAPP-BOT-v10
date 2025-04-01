@@ -6,58 +6,52 @@ import os
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
 
-# Define paths
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), 'cookies.txt')
+# Configuration
 STORE_DIR = os.path.join(os.path.dirname(__file__), 'store')
 
-def extract_and_download(url, media_type):
-    """Ultra fast audio download with optimizations"""
+def download_m4a(url):
+    """Download audio in m4a format without re-encoding"""
     ydl_opts = {
-        'outtmpl': os.path.join(STORE_DIR, '%(id)s.%(ext)s'),
+        'outtmpl': os.path.join(STORE_DIR, '%(id)s.m4a'),
         'quiet': True,
         'no_warnings': True,
+        'format': 'bestaudio[ext=m4a]',  # Only m4a format
+        'postprocessors': [],  # No post-processing
+        'extractaudio': True,  # Extract audio
+        'keepvideo': False,   # No video
+        # Performance optimizations
         'nocheckcertificate': True,
-        'retries': 2,
-        'progress': False,
-        'extract_flat': False,
-        # Speed optimizations
+        'ignoreerrors': False,
+        'logtostderr': False,
+        'nooverwrites': True,
+        'noplaylist': True,
         'socket_timeout': 30,
         'nopart': True,
         'http_chunk_size': 10485760,
-        'check_formats': False,
-    }
-
-    if os.path.exists(COOKIES_FILE):
-        ydl_opts['cookiefile'] = COOKIES_FILE
-
-    if media_type == 'audio':
-        # Directly download best audio without re-encoding
-        ydl_opts = {
-            **ydl_opts,
-            'format': 'bestaudio/best',
-            'postprocessors': [],  # Skip all postprocessing
-            'extractor_args': {
-                'youtube': {
-                    'skip': ['dash', 'hls', 'translated_subs'],
-                    'player_skip': ['configs', 'webpage']
-                }
-            },
-            # Prefer formats that don't need conversion
-            'prefer_free_formats': True,
-            'keepvideo': False,  # Don't keep video track
+        # YouTube specific optimizations
+        'extractor_args': {
+            'youtube': {
+                'skip': ['dash', 'hls', 'translated_subs'],
+                'player_skip': ['configs', 'webpage']
+            }
         }
-    else:  # video (kept for compatibility)
-        ydl_opts['format'] = 'bestvideo[height<=360]+bestaudio/best[height<=360]'
-        ydl_opts['merge_output_format'] = 'mp4'
+    }
 
     stdout_buffer = StringIO()
     stderr_buffer = StringIO()
+    
     try:
         with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                filename = ydl.prepare_filename(info).replace('.webm', '.m4a').replace('.mp4', '.m4a')
                 
-                filename = ydl.prepare_filename(info)
+                if not os.path.exists(filename):
+                    return {
+                        'success': False,
+                        'error': 'File not created'
+                    }
+                
                 return {
                     'success': True,
                     'filename': os.path.abspath(filename),
@@ -67,21 +61,20 @@ def extract_and_download(url, media_type):
     except Exception as e:
         return {
             'success': False,
-            'error': f"Error: {str(e)}"
+            'error': str(e)
         }
     finally:
         stdout_buffer.close()
         stderr_buffer.close()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        result = {'success': False, 'error': 'Usage: python ytdl.py <url> <media_type>'}
+    if len(sys.argv) != 2:
+        result = {'success': False, 'error': 'Usage: python ytdls.py <url>'}
     else:
         url = sys.argv[1]
-        media_type = sys.argv[2]
         if not os.path.exists(STORE_DIR):
             os.makedirs(STORE_DIR, exist_ok=True)
-        result = extract_and_download(url, media_type)
+        result = download_m4a(url)
     
     sys.stdout.write(json.dumps(result))
     sys.stdout.flush()
