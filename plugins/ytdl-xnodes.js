@@ -1,3 +1,4 @@
+
 const { cmd } = require("../command"); // Assuming you have a command handler
 const ytdl = require("garfield-ytdl"); // For downloading YouTube videos
 const playdl = require("play-dl"); // For searching YouTube videos
@@ -241,8 +242,23 @@ const cookies = [
     "session": false,
     "value": "AKEyXzUt5-_t4s6vidgD9s8A5l82Q7KpQlhILJk0prSocpIFcrBfOCvpQYvyykoG-rboiAA6"
   }
-] ;
+];
+
 // Create a custom agent with cookies
+const agent = ytdl.createAgent(cookies);
+
+// Custom headers and options for ytdl
+const ytdlOptions = {
+  headers: {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    Accept:
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+  },
+  agent: agent, // Use the custom agent with cookies
+};
+
 // Helper function to handle errors
 const handleErrors = (reply, errorMsg) => (e) => {
   console.error(e); // Log errors for debugging
@@ -268,21 +284,20 @@ const downloadAndConvertAudio = async (videoUrl, title, reply, conn, from, mek) 
     const tempAudioFile = path.join(storeDir, `${sanitizedTitle}.m4a`); // Temporary audio file
 
     // Get video info
-    // Get video info
-const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+    const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+    const videoFormat = ytdl
+      .filterFormats(info.formats, "videoandaudio")
+      .find((f) => f.qualityLabel === "360p");
 
-// Find the format with the specified itag (e.g., itag 18 for 360p)
-const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
+    if (!videoFormat) {
+      return reply("❌ No suitable video format found. 😢");
+    }
 
-if (!videoFormat) {
-  return reply("❌ No suitable video format found for the specified itag. 😢");
-}
-
-// Download video with the specified itag
-const videoStream = ytdl.downloadFromInfo(info, {
-  format: videoFormat, // Use the format with the specified itag
-  ...ytdlOptions,
-});
+    // Download video with custom options
+    const videoStream = ytdl.downloadFromInfo(info, {
+      quality: videoFormat.itag,
+      ...ytdlOptions,
+    });
     await new Promise((resolve, reject) => {
       videoStream
         .pipe(fs.createWriteStream(tempVideoFile))
@@ -313,7 +328,7 @@ const videoStream = ytdl.downloadFromInfo(info, {
       {
         audio: fs.readFileSync(tempAudioFile), // Read the m4a file
         mimetype: "audio/mp4", // Set MIME type for AAC audio
-        fileName: `${sanitizedTitle}.m4a`, // Use the title as the file name
+        fileName: `${title}.m4a`, // Use the title as the file name
       },
       { quoted: mek }
     );
@@ -326,6 +341,7 @@ const videoStream = ytdl.downloadFromInfo(info, {
   }
 };
 
+// Command to download and send audio
 cmd(
   {
     pattern: "song",
@@ -337,33 +353,33 @@ cmd(
   },
   async (conn, mek, msg, { from, args, reply }) => {
     try {
-      const videoUrl = "https://www.youtube.com/watch?v=cBoh3SroBMo";
-
-      // 3. Process and filter function
-      async function processAndFilterVideo() {
-        try {
-          // Setup with cookies
-          const agent = ytdl.createAgent(cookies);
-
-          // Get video info
-          const info = await ytdl.getInfo(videoUrl, { agent });
-
-          // Filter formats that have both video and audio
-          const videoAudioFormats = info.formats.filter(
-            (format) => format.hasVideo && format.hasAudio
-          );
-
-          // Log the filtered formats
-          console.log("Formats with video and audio:", videoAudioFormats);
-        } catch (error) {
-          console.error("Error:", error.message);
-        }
+      const searchQuery = args.join(" "); // Get the search query
+      if (!searchQuery) {
+        return reply("❗️ Please provide a song name or keywords. 📝\nExample: .song Despacito");
       }
 
-      // Start process
-      await processAndFilterVideo();
-    } catch (error) {
-      console.error("Error in main command:", error.message);
+      reply("```🔍 Searching for the song... 🎵```");
+
+      // Search for the song
+      const video = await searchVideo(searchQuery);
+
+      if (!video) {
+        return reply(`❌ No results found for "${searchQuery}".`);
+      }
+
+      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Get video URL
+
+      // Send video details to the user
+      const ytmsg = `*🎶 Song Name* - ${video.title}\n*🕜 Duration* - ${video.durationRaw}\n*📻 Listeners* - ${video.views?.toLocaleString() || "N/A"}\n*🎙️ Artist* - ${video.channel?.name || "Unknown"}\n> File Name ${video.title}.m4a`;
+      await conn.sendMessage(from, {
+        image: { url: video.thumbnails[0].url }, // Send video thumbnail
+        caption: ytmsg, // Send video details
+      });
+
+      // Download, convert, and send audio
+      await downloadAndConvertAudio(videoUrl, video.title, reply, conn, from, mek);
+    } catch (e) {
+      handleErrors(reply, "❌ An error occurred while processing your request. 😢")(e);
     }
   }
 );
@@ -386,7 +402,7 @@ cmd(
         );
       }
 
-     
+      reply("```🔍 Searching for the video... 🎥```");
 
       // Search for the video using play-dl
       const video = await searchVideo(searchQuery);
@@ -404,21 +420,20 @@ cmd(
       const tempFileName = `./store/yt_video_${sanitizedTitle}.mp4`;
 
       // Get video info with custom options
-      // Get video info
-const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+      const info = await ytdl.getInfo(videoUrl, ytdlOptions);
+      const videoFormat = ytdl
+        .filterFormats(info.formats, "videoandaudio")
+        .find((f) => f.qualityLabel === "360p");
 
-// Find the format with the specified itag (e.g., itag 18 for 360p)
-const videoFormat = info.formats.find((f) => f.itag === 18); // Replace 18 with the desired itag
+      if (!videoFormat) {
+        return reply("❌ No suitable video format found. 😢");
+      }
 
-if (!videoFormat) {
-  return reply("❌ No suitable video format found for the specified itag. 😢");
-}
-
-// Download video with the specified itag
-const videoStream = ytdl.downloadFromInfo(info, {
-  format: videoFormat, // Use the format with the specified itag
-  ...ytdlOptions,
-});
+      // Download video with custom options
+      const videoStream = ytdl.downloadFromInfo(info, {
+        quality: videoFormat.itag,
+        ...ytdlOptions,
+      });
       await new Promise((resolve, reject) => {
         videoStream
           .pipe(fs.createWriteStream(tempFileName))
