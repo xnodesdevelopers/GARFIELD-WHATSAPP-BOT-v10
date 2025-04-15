@@ -1,5 +1,4 @@
 # Netscape HTTP Cookie File
-# This file is compatible with libcurl and other tools that parse Netscape-style cookies.
 .youtube.com	TRUE	/	FALSE	1744608000	YSC	wVVx67pOINs
 .youtube.com	TRUE	/	FALSE	1744608000	VISITOR_INFO1_LIVE	nHCvwjNCL_Y
 .youtube.com	TRUE	/	FALSE	1744608000	VISITOR_PRIVACY_METADATA	CgJMSxIEGgAgJQ%3D%3D
